@@ -18,6 +18,14 @@ class PsychUIRadioGroup extends FlxSpriteGroup
 
   public var checked(default, set):Int = -1;
   public var checkedRadio(default, set):PsychUIRadioItem;
+  public var disabled(default, set):Bool = false;
+
+  function set_disabled(value:Bool):Bool
+  {
+    disabled = value;
+    PsychUIUtil.disableMembers(members, disabled);
+    return disabled;
+  }
 
   public var arrowUp:FlxSprite;
   public var arrowDown:FlxSprite;
@@ -53,6 +61,8 @@ class PsychUIRadioGroup extends FlxSpriteGroup
   override function update(elapsed:Float)
   {
     super.update(elapsed);
+
+    if (disabled) return;
 
     _hitbox.x = x;
     _hitbox.y = y;

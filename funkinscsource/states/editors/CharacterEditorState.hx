@@ -46,7 +46,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
   var _goToPlayState:Bool = true;
 
   var anims = null;
-  var animsTxtGroup:FlxTypedGroup<FlxText>;
+  var animsTxt:FlxText;
   var curAnim = 0;
 
   private var camEditor:FlxCamera;
@@ -56,6 +56,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
   var UI_characterbox:PsychUIBox;
 
   var unsavedProgress:Bool = false;
+  var selectedFormat:FlxTextFormat = new FlxTextFormat(FlxColor.LIME);
 
   public function new(char:String = null, goToPlayState:Bool = true)
   {
@@ -79,7 +80,6 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
     loadBG();
 
-    animsTxtGroup = new FlxTypedGroup<FlxText>();
     silhouettes = new FlxSpriteGroup();
     add(silhouettes);
 
@@ -102,25 +102,30 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
     ghost.alpha = ghostAlpha;
     add(ghost);
 
+    animsTxt = new FlxText(10, 32, 400, '');
+    animsTxt.setFormat(null, 16, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+    animsTxt.scrollFactor.set();
+    animsTxt.borderSize = 1;
+    animsTxt.cameras = [camHUD];
+
     addCharacter();
 
     cameraFollowPointer = new FlxSprite(FlxGraphic.fromClass(PointerGraphic));
     cameraFollowPointer.setGraphicSize(40, 40);
     cameraFollowPointer.updateHitbox();
-    add(cameraFollowPointer);
 
     healthBar = new Bar(30, FlxG.height - 75);
     healthBar.scrollFactor.set();
-    add(healthBar);
     healthBar.cameras = [camHUD];
 
     healthIcon = new HealthIcon(character.healthIcon, false, false);
     healthIcon.y = FlxG.height - 150;
-    add(healthIcon);
     healthIcon.cameras = [camHUD];
 
-    animsTxtGroup.cameras = [camHUD];
-    add(animsTxtGroup);
+    add(cameraFollowPointer);
+    add(healthBar);
+    add(healthIcon);
+    add(animsTxt);
 
     var tipText:FlxText = new FlxText(FlxG.width - 300, FlxG.height - 24, 300, "Press F1 for Help", 20);
     tipText.cameras = [camHUD];
@@ -321,7 +326,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
           spr.scale.set(character.scale.x, character.scale.y);
           spr.updateHitbox();
 
-          spr.offset.set(character.offset.x, spr.offset.y);
+          spr.offset.set(character.offset.x * spr.offset.x, character.offset.y * spr.offset.y);
           spr.visible = true;
 
           var otherSpr:FlxSprite = #if flxanimate (spr == animateGhost) ? ghost : animateGhost #else ghost #end;
@@ -619,7 +624,6 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
           {
             curAnim = FlxMath.wrap(curAnim, 0, anims.length - 1);
             character.playAnim(anims[curAnim].anim, true);
-            updateTextColors();
           }
           reloadAnimList();
           Debug.logInfo('Removed animation: ' + animationInputText.text);
@@ -1052,16 +1056,8 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
     if (lastZoom != FlxG.camera.zoom) cameraZoomText.text = 'Zoom: ' + FlxMath.roundDecimal(FlxG.camera.zoom, 2) + 'x';
 
-    /*if (FlxG.keys.justPressed.TAB)
-        {
-          changedOffsetType = !changedOffsetType;
-          reloadAnimList();
-      }*/
-
     // CHARACTER CONTROLS
     var changedAnim:Bool = false;
-    var multipliedAnimations:Int = 1;
-    var anim = anims[curAnim];
     if (anims.length > 1)
     {
       if (FlxG.keys.justPressed.W && (changedAnim = true)) curAnim--;
@@ -1072,7 +1068,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
         undoOffsets = null;
         curAnim = FlxMath.wrap(curAnim, 0, anims.length - 1);
         character.playAnim(anims[curAnim].anim, true);
-        updateTextColors();
+        updateText();
       }
     }
 
@@ -1090,81 +1086,78 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
       FlxG.keys.pressed.DOWN
     ];
 
-    if (!changedOffsetType)
+    if (moveKeysP.contains(true))
     {
-      if (moveKeysP.contains(true))
+      character.editorOffset.x += ((moveKeysP[0] ? 1 : 0) - (moveKeysP[1] ? 1 : 0)) * shiftMultBig;
+      character.editorOffset.y += ((moveKeysP[2] ? 1 : 0) - (moveKeysP[3] ? 1 : 0)) * shiftMultBig;
+      changedOffset = true;
+    }
+
+    if (moveKeys.contains(true))
+    {
+      holdingArrowsTime += elapsed;
+      if (holdingArrowsTime > 0.6)
       {
-        character.offset.x += ((moveKeysP[0] ? 1 : 0) - (moveKeysP[1] ? 1 : 0)) * shiftMultBig;
-        character.offset.y += ((moveKeysP[2] ? 1 : 0) - (moveKeysP[3] ? 1 : 0)) * shiftMultBig;
+        holdingArrowsElapsed += elapsed;
+        while (holdingArrowsElapsed > (1 / 60))
+        {
+          character.editorOffset.x += ((moveKeys[0] ? 1 : 0) - (moveKeys[1] ? 1 : 0)) * shiftMultBig;
+          character.editorOffset.y += ((moveKeys[2] ? 1 : 0) - (moveKeys[3] ? 1 : 0)) * shiftMultBig;
+          holdingArrowsElapsed -= (1 / 60);
+          changedOffset = true;
+        }
+      }
+    }
+    else
+      holdingArrowsTime = 0;
+
+    if (FlxG.mouse.pressedRight && (FlxG.mouse.deltaViewX != 0 || FlxG.mouse.deltaViewY != 0))
+    {
+      character.editorOffset.x -= FlxG.mouse.deltaViewX;
+      character.editorOffset.y -= FlxG.mouse.deltaViewY;
+      changedOffset = true;
+    }
+
+    if (FlxG.keys.pressed.CONTROL)
+    {
+      if (FlxG.keys.justPressed.C)
+      {
+        copiedOffset[0] = character.editorOffset.x;
+        copiedOffset[1] = character.editorOffset.y;
         changedOffset = true;
       }
-
-      if (moveKeys.contains(true))
+      else if (FlxG.keys.justPressed.V)
       {
-        holdingArrowsTime += elapsed;
-        if (holdingArrowsTime > 0.6)
-        {
-          holdingArrowsElapsed += elapsed;
-          while (holdingArrowsElapsed > (1 / 60))
-          {
-            character.offset.x += ((moveKeys[0] ? 1 : 0) - (moveKeys[1] ? 1 : 0)) * shiftMultBig;
-            character.offset.y += ((moveKeys[2] ? 1 : 0) - (moveKeys[3] ? 1 : 0)) * shiftMultBig;
-            holdingArrowsElapsed -= (1 / 60);
-            changedOffset = true;
-          }
-        }
-      }
-      else
-        holdingArrowsTime = 0;
-
-      if (FlxG.mouse.pressedRight && (FlxG.mouse.deltaViewX != 0 || FlxG.mouse.deltaViewY != 0))
-      {
-        character.offset.x -= FlxG.mouse.deltaViewX;
-        character.offset.y -= FlxG.mouse.deltaViewY;
+        undoOffsets = [character.offset.x, character.editorOffset.y];
+        character.editorOffset.x = copiedOffset[0];
+        character.editorOffset.y = copiedOffset[1];
         changedOffset = true;
       }
-
-      if (FlxG.keys.pressed.CONTROL)
+      else if (FlxG.keys.justPressed.R)
       {
-        if (FlxG.keys.justPressed.C)
-        {
-          copiedOffset[0] = character.offset.x;
-          copiedOffset[1] = character.offset.y;
-          changedOffset = true;
-        }
-        else if (FlxG.keys.justPressed.V)
-        {
-          undoOffsets = [character.offset.x, character.offset.y];
-          character.offset.x = copiedOffset[0];
-          character.offset.y = copiedOffset[1];
-          changedOffset = true;
-        }
-        else if (FlxG.keys.justPressed.R)
-        {
-          undoOffsets = [character.offset.x, character.offset.y];
-          character.offset.set(0, 0);
-          changedOffset = true;
-        }
-        else if (FlxG.keys.justPressed.Z && undoOffsets != null)
-        {
-          character.offset.x = undoOffsets[0];
-          character.offset.y = undoOffsets[1];
-          changedOffset = true;
-        }
+        undoOffsets = [character.editorOffset.x, character.editorOffset.y];
+        character.editorOffset.set(0, 0);
+        changedOffset = true;
       }
-
-      if (changedOffset && anim != null)
+      else if (FlxG.keys.justPressed.Z && undoOffsets != null)
       {
-        if (anim.offsets != null)
-        {
-          anim.offsets[0] = Std.int(character.offset.x);
-          anim.offsets[1] = Std.int(character.offset.y);
-        }
+        character.editorOffset.x = undoOffsets[0];
+        character.editorOffset.y = undoOffsets[1];
+        changedOffset = true;
+      }
+    }
 
-        var myText:FlxText = animsTxtGroup.members[curAnim];
-        var intendText:String = anim.anim + ": " + anim.offsets;
-        if (intendText != myText.text) myText.text = anim.anim + ": " + anim.offsets;
-        character.addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
+    var anim = anims[curAnim];
+    if (changedOffset && anim != null)
+    {
+      if (anim.offsets != null)
+      {
+        anim.offsets[0] = Std.int(character.editorOffset.x);
+        anim.offsets[1] = Std.int(character.editorOffset.y);
+
+        character.addOffset(anim.anim, character.editorOffset.x, character.editorOffset.y);
+        character.playAnim(anim.anim, true);
+        updateText();
       }
     }
 
@@ -1328,52 +1321,35 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
     #end
   }
 
-  var changedOffsetType:Bool = false;
-
   inline function reloadAnimList()
   {
     anims = character.animationsArray;
     if (anims.length > 0) character.playAnim(anims[0].anim, true);
     curAnim = 0;
 
-    for (text in animsTxtGroup)
-      text.kill();
-
-    var daLoop = 0;
-
-    for (anim in anims)
-    {
-      var text:FlxText = animsTxtGroup.recycle(FlxText);
-      text.x = 10;
-      text.y = 32 + (20 * daLoop);
-      text.fieldWidth = 400;
-      text.fieldHeight = 20;
-      /*if (changedOffsetType)
-            if (character.animPlayerOffsets != null)
-              text.text = 'Player Offset: ' + anim.anim + ": " + anim.playerOffsets;
-            else text.text = anim.anim + ": " + anim.offsets;
-          else text.text = anim.anim + ": " + anim.offsets; */
-      text.text = anim.anim + ": " + (anim.playerOffsets != null ? anim.playerOffsets : anim.offsets);
-      text.setFormat(null, 16, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
-      text.scrollFactor.set();
-      text.borderSize = 1;
-      animsTxtGroup.add(text);
-
-      daLoop++;
-    }
-    updateTextColors();
+    updateText();
     if (animationDropDown != null) reloadAnimationDropDown();
   }
 
-  inline function updateTextColors()
+  inline function updateText()
   {
-    var daLoop = 0;
-    for (text in animsTxtGroup)
+    animsTxt.removeFormat(selectedFormat);
+
+    var intendText:String = '';
+    for (num => anim in anims)
     {
-      text.color = FlxColor.WHITE;
-      if (daLoop == curAnim) text.color = FlxColor.LIME;
-      daLoop++;
+      if (num > 0) intendText += '\n';
+
+      if (num == curAnim)
+      {
+        var n:Int = intendText.length;
+        intendText += anim.anim + ": " + (anim.playerOffsets != null ? anim.playerOffsets : anim.offsets);
+        animsTxt.addFormat(selectedFormat, n, intendText.length);
+      }
+      else
+        intendText += anim.anim + ": " + anim.offsets;
     }
+    animsTxt.text = intendText;
   }
 
   inline function updateCharacterPositions()

@@ -5,23 +5,10 @@ import flixel.util.FlxDestroyUtil;
 import flixel.graphics.frames.FlxAtlasFrames;
 import openfl.utils.Assets;
 import haxe.Json;
-import objects.stage.TankmenBG;
-#if LUA_ALLOWED
-import psychlua.*;
-#else
-import psychlua.LuaUtils;
-import psychlua.HScript;
-#end
-#if (HSCRIPT_ALLOWED && HScriptImproved)
-import codenameengine.scripting.Script as HScriptCode;
-#end
-import shaders.FNFShader;
-#if HSCRIPT_ALLOWED
-import scripting.*;
-import crowplexus.iris.Iris;
-#end
+import objects.stage.TankmenBG; #if LUA_ALLOWED import psychlua.*; #else import psychlua.LuaUtils;
+import psychlua.HScript; #end#if (HSCRIPT_ALLOWED && HScriptImproved) import codenameengine.scripting.Script as HScriptCode; #end import shaders.FNFShader; #if HSCRIPT_ALLOWED import scripting.*;
+import crowplexus.iris.Iris; #end class Character extends FunkinSCSprite
 
-class Character extends FunkinSCSprite
 {
   /**
    * Default Character In case not finding the original or is just the default one.
@@ -163,6 +150,11 @@ class Character extends FunkinSCSprite
    * The health icon the character has.
    */
   public var healthIcon:String = 'face';
+
+  /**
+   * The offset of character for editor, used for the offset TXT not breaking!
+   */
+  public var editorOffset:FlxPoint = new FlxPoint(0, 0);
 
   /**
    * The array of animations taken from the character file.
@@ -378,7 +370,15 @@ class Character extends FunkinSCSprite
   #end
 
   #end
+
+  /**
+   * Use this for idle dances, idle danceL, danceR (L / R = Left / Right) dances specified instead of the original name anims.
+   */
   public var idleDances:IdleDances = null;
+
+  /**
+   * Use a sequence of idle animations.
+   */
   public var useIdleSequence:Bool = false;
 
   public function new(x:Float, y:Float, ?character:String = 'bf', ?isPlayer:Bool = false, ?characterType:CharacterType = OTHER)
@@ -904,12 +904,19 @@ class Character extends FunkinSCSprite
 
     if (debugMode)
     {
-      if ((hasOffsetAnimation(AnimName) && !isPlayer)
-        || (animPlayerOffsets.exists(AnimName) && isPlayer)) offset.set(daOffset[0] * daZoom, daOffset[1] * daZoom);
+      if ((hasOffsetAnimation(AnimName) && !isPlayer) || (animPlayerOffsets.exists(AnimName) && isPlayer))
+      {
+        offset.set(daOffset[0] * scale.x * daZoom, daOffset[1] * scale.y * daZoom);
+        editorOffset.set(daOffset[0], daOffset[1]);
+      }
     }
     else
     {
-      if (hasOffsetAnimation(AnimName)) offset.set(daOffset[0] * daZoom, daOffset[1] * daZoom);
+      if (hasOffsetAnimation(AnimName))
+      {
+        offset.set(daOffset[0] * scale.x * daZoom, daOffset[1] * scale.y * daZoom);
+        editorOffset.set(daOffset[0], daOffset[1]);
+      }
     }
 
     if (doAfterAffectForAnimationName) doAfterAffectForName(AnimName);
@@ -984,36 +991,35 @@ class Character extends FunkinSCSprite
   }
 
   public dynamic function sortAnims(Obj1:Array<Dynamic>, Obj2:Array<Dynamic>):Int
-  {
     return FlxSort.byValues(FlxSort.ASCENDING, Obj1[0], Obj2[0]);
-  }
 
   public function addPlayerOffset(name:String, x:Float = 0, y:Float = 0)
-  {
     animPlayerOffsets[name] = [x, y];
-  }
 
   public function quickAnimAdd(name:String, anim:String)
-  {
     animation.addByPrefix(name, anim, 24, false);
-  }
 
   public dynamic function setZoom(?toChange:Float = 1):Void
   {
     daZoom = toChange;
 
-    var daMulti:Float = 1;
-    daMulti *= 1;
-    daMulti = jsonScale;
-
-    var daValue:Float = toChange * daMulti;
+    final daMulti:Float = jsonScale;
+    final daValue:Float = toChange * daMulti;
     scale.set(daValue, daValue);
   }
 
   public dynamic function resetAnimationVars()
   {
     for (i in [
-      'flipMode', 'stopIdle', 'skipDance', 'nonanimated', 'specialAnim', 'doMissThing', 'stunned', 'stoppedDancing', 'stoppedUpdatingCharacter',
+      'flipMode',
+      'stopIdle',
+      'skipDance',
+      'nonanimated',
+      'specialAnim',
+      'doMissThing',
+      'stunned',
+      'stoppedDancing',
+      'stoppedUpdatingCharacter',
       'charNotPlaying'
     ])
     {
@@ -1154,6 +1160,7 @@ class Character extends FunkinSCSprite
     codeNameScripts = null;
     #end
     #end
+    editorOffset = flixel.util.FlxDestroyUtil.put(editorOffset);
     super.destroy();
   }
 

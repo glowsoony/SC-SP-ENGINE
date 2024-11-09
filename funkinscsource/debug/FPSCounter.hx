@@ -75,7 +75,7 @@ class FPSCounter extends TextField
       times.shift();
 
     // prevents the overlay from updating every frame, why would you need to anyways @crowplexus
-    if (deltaTimeout < 1000)
+    if (deltaTimeout < 50)
     {
       deltaTimeout += deltaTime;
       return;
@@ -113,6 +113,7 @@ class FPSCounter extends TextField
   }
 }
 
+// Gotten from Bolo Vevo's Kade Engine (erm, I forgot if it's from his engine or not)
 #if windows
 @:cppFileCode('#include <windows.h>\n#include <psapi.h>')
 #end
@@ -188,7 +189,7 @@ class MemoryUtil
   }
 }
 
-class DateSetup
+class DateSetup // Made by me -glow
 {
   public static function initDate():String
   {

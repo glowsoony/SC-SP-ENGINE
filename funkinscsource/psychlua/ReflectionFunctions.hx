@@ -118,7 +118,7 @@ class ReflectionFunctions
             }
             FunkinLua.luaTrace('getPropertyFromGroup: Object #$index from group: $group doesn\'t exist!', false, false, FlxColor.RED);
           default: // Is Group
-            var result:Dynamic = LuaUtils.getGroupStuff(realObject.members[index], variable, allowMaps);
+            var result:Dynamic = LuaUtils.getGroupStuff(Reflect.getProperty(realObject, 'members')[index], variable, allowMaps);
             return result;
         }
       }
@@ -150,7 +150,8 @@ class ReflectionFunctions
                 LuaUtils.setGroupStuff(leArray, variable, allowInstances ? parseSingleInstance(value) : value, allowMaps);
               }
             default: // Is Group
-              LuaUtils.setGroupStuff(realObject.members[index], variable, allowInstances ? parseSingleInstance(value) : value, allowMaps);
+              LuaUtils.setGroupStuff(Reflect.getProperty(realObject, 'members')[index], variable, allowInstances ? parseSingleInstance(value) : value,
+                allowMaps);
           }
         }
         else
@@ -208,11 +209,6 @@ class ReflectionFunctions
       switch (Type.typeof(groupOrArray))
       {
         case TClass(Array): // Is Array
-          if (obj == null) obj = groupOrArray.members[index];
-          groupOrArray.remove(obj, true);
-          if (destroy) obj.destroy();
-
-        default: // Is Group
           if (obj != null)
           {
             groupOrArray.remove(obj);
@@ -220,6 +216,11 @@ class ReflectionFunctions
           }
           else
             groupOrArray.remove(groupOrArray[index]);
+        default:
+          // Is Group
+          if (obj == null) obj = Reflect.getProperty(groupOrArray, 'members')[index]; // Reflect here because of FlxTypedSpriteGroup
+          groupOrArray.remove(obj, true);
+          if (destroy) obj.destroy();
       }
     });
 
@@ -265,7 +266,7 @@ class ReflectionFunctions
         return (obj != null);
       }
       else
-        FunkinLua.luaTrace('createInstance: Variable $variableToSave is already being used and cannot be replaced!', false, false, FlxColor.RED);
+        FunkinLua.luaTrace('createInstance: Class $className not found', false, false, FlxColor.RED);
       return false;
     });
     funk.set("addInstance", function(objectName:String, ?inFront:Bool = false) {

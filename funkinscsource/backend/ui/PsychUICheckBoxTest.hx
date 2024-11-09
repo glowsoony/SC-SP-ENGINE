@@ -1,32 +1,27 @@
 package backend.ui;
 
-class PsychUICheckBox extends FlxSpriteGroup
+class PsychUICheckBoxTest extends FlxSpriteGroup
 {
   public static final CLICK_EVENT = 'checkbox_click';
 
   public var name:String;
   public var box:FlxSprite;
+  public var line:FlxSprite;
   public var text:FlxText;
   public var label(get, set):String;
 
   public var checked(default, set):Bool = false;
   public var onClick:Void->Void = null;
-  public var disabled(default, set):Bool = false;
-
-  function set_disabled(value:Bool):Bool
-  {
-    disabled = value;
-    PsychUIUtil.disableMembers(members, disabled);
-    return disabled;
-  }
 
   public function new(x:Float, y:Float, label:String, ?textWid:Int = 100, ?callback:Void->Void)
   {
     super(x, y);
 
     box = new FlxSprite();
+    line = new FlxSprite();
     boxGraphic();
     add(box);
+    add(line);
 
     text = new FlxText(box.width + 4, 0, textWid, label);
     text.y += box.height / 2 - text.height / 2;
@@ -37,10 +32,15 @@ class PsychUICheckBox extends FlxSpriteGroup
 
   public function boxGraphic()
   {
-    box.loadGraphic(Paths.image('psych-ui/checkbox', 'embed'), true, 16, 16);
-    box.animation.add('false', [0]);
-    box.animation.add('true', [1]);
+    box.loadGraphic(Paths.image('ui/CheckBoxes'), true, 150, 150);
+    box.animation.add('true', [0, 1, 2, 3, 4], 12, false);
+    box.animation.add('false', [4, 3, 2, 1, 0], 12, false);
     box.animation.play('false');
+
+    line.loadGraphic(Paths.image('ui/CheckBoxLines'), true, 150, 150);
+    line.animation.add('true', [0, 1, 2, 3, 4], 12, false);
+    line.animation.add('false', [4, 3, 2, 1, 0], 12, false);
+    line.animation.play('false');
   }
 
   public var broadcastCheckBoxEvent:Bool = true;
@@ -48,8 +48,6 @@ class PsychUICheckBox extends FlxSpriteGroup
   override function update(elapsed:Float)
   {
     super.update(elapsed);
-
-    if (disabled) return;
 
     if (FlxG.mouse.justPressed)
     {
@@ -69,6 +67,7 @@ class PsychUICheckBox extends FlxSpriteGroup
   {
     var v:Bool = (v != null && v != false);
     box.animation.play(Std.string(v));
+    line.animation.play(Std.string(v));
     return (checked = v);
   }
 

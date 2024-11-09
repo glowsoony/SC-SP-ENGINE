@@ -45,6 +45,14 @@ class PsychUIBox extends FlxSpriteGroup
   public var canMinimize(default, set):Bool = true;
   public var isMinimized(default, set):Bool = false;
   public var minimizeOnFocusLost:Bool = false;
+  public var disabled(default, set):Bool = false;
+
+  function set_disabled(value:Bool):Bool
+  {
+    disabled = value;
+    PsychUIUtil.disableMembers(members, disabled);
+    return disabled;
+  }
 
   public function new(x:Float, y:Float, width:Int, height:Int, tabs:Array<String> = null)
   {
@@ -83,6 +91,8 @@ class PsychUIBox extends FlxSpriteGroup
   override function update(elapsed:Float)
   {
     super.update(elapsed);
+
+    if (disabled) return;
 
     _lastClick += elapsed;
     if (!FlxG.mouse.released && _draggingBox && canMove)

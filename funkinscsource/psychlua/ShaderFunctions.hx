@@ -29,10 +29,7 @@ class ShaderFunctions
         return false;
       }
 
-      final split:Array<String> = obj.split('.');
-      final leObj:Dynamic = split.length > 1 ? LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split),
-        split[split.length - 1]) : LuaUtils.getObjectDirectly(split[0]);
-
+      final leObj:Dynamic = LuaUtils.getObjectLoop(obj);
       if (leObj != null)
       {
         final arr:Array<String> = findOther ? [FunkinLua.lua_Shaders.get(shader)
@@ -40,15 +37,14 @@ class ShaderFunctions
           .glFragmentSource, FunkinLua.lua_Shaders.get(shader).getShader().glVertexSource] : funk.runtimeShaders.get(shader);
         final daShader:FlxRuntimeShader = new FlxRuntimeShader(arr[0], arr[1]);
 
-        if (Std.isOfType(leObj, FlxCamera))
+        if (!Std.isOfType(leObj, FlxCamera)) leObj.shader = daShader;
+        else
         {
           final daFilters = (leObj.filters != null) ? leObj.filters : [];
           daFilters.push(new ShaderFilter(daShader));
 
           leObj.setFilters(daFilters);
         }
-        else
-          leObj.shader = daShader;
         return true;
       }
       #else
@@ -57,10 +53,7 @@ class ShaderFunctions
       return false;
     });
     funk.set("removeSpriteShader", function(obj:String, ?shader:String = "", ?findOther:Bool = false) {
-      final split:Array<String> = obj.split('.');
-      final leObj:Dynamic = split.length > 1 ? LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split),
-        split[split.length - 1]) : LuaUtils.getObjectDirectly(split[0]);
-
+      final leObj:Dynamic = LuaUtils.getObjectLoop(obj);
       if (Std.isOfType(leObj, FlxCamera))
       {
         var newCamEffects = [];
@@ -101,22 +94,28 @@ class ShaderFunctions
     });
 
     funk.set("getShaderBool", function(obj:String, prop:String, ?swagShader:String = "") {
-      return checkFunction(funk, "getBool", obj, prop, Bool, swagShader);
+      final newBool:Bool = false;
+      return checkFunction(funk, "getBool", obj, prop, newBool, swagShader);
     });
     funk.set("getShaderBoolArray", function(obj:String, prop:String, ?swagShader:String = "") {
-      return checkFunction(funk, "getBoolArray", obj, prop, Array, swagShader);
+      final newArray:Array<Dynamic> = [];
+      return checkFunction(funk, "getBoolArray", obj, prop, newArray, swagShader);
     });
     funk.set("getShaderInt", function(obj:String, prop:String, ?swagShader:String = "") {
-      return checkFunction(funk, "getInt", obj, prop, Int, swagShader);
+      final newInt:Int = 1;
+      return checkFunction(funk, "getInt", obj, prop, newInt, swagShader);
     });
     funk.set("getShaderIntArray", function(obj:String, prop:String, ?swagShader:String = "") {
-      return checkFunction(funk, "getIntArray", obj, prop, Array, swagShader);
+      final newArray:Array<Dynamic> = [];
+      return checkFunction(funk, "getIntArray", obj, prop, newArray, swagShader);
     });
     funk.set("getShaderFloat", function(obj:String, prop:String, ?swagShader:String = "") {
-      return checkFunction(funk, "getFloat", obj, prop, Float, swagShader);
+      final newFloat:Float = 1.000000;
+      return checkFunction(funk, "getFloat", obj, prop, newFloat, swagShader);
     });
     funk.set("getShaderFloatArray", function(obj:String, prop:String, ?swagShader:String = "") {
-      return checkFunction(funk, "getFloatArray", obj, prop, Array, swagShader);
+      final newArray:Array<Dynamic> = [];
+      return checkFunction(funk, "getFloatArray", obj, prop, newArray, swagShader);
     });
 
     funk.set("setShaderBool", function(obj:String, prop:String, value:Bool, ?swagShader:String = "") {
@@ -181,10 +180,7 @@ class ShaderFunctions
     });
     funk.set("setActorShader", function(actorStr:String, shaderName:String) {
       final shad = FunkinLua.lua_Shaders.get(shaderName).getShader();
-      final split:Array<String> = actorStr.split('.');
-      final spr:FlxSprite = split.length > 1 ? LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split),
-        split[split.length - 1]) : LuaUtils.getObjectDirectly(split[0]);
-
+      final spr:FlxSprite = LuaUtils.getObjectLoop(actorStr);
       if (shad != null)
       {
         Debug.logInfo("SHAD NOT NULL");
@@ -391,10 +387,7 @@ class ShaderFunctions
   {
     if (!ClientPrefs.data.shaders) return null;
 
-    final split:Array<String> = obj.split('.');
-    final target:Dynamic = split.length > 1 ? LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split),
-      split[split.length - 1]) : LuaUtils.getObjectDirectly(split[0]);
-
+    final target:Dynamic = LuaUtils.getObjectLoop(obj);
     if (target == null)
     {
       FunkinLua.luaTrace('Error on getting shader: Object $obj not found', false, false, FlxColor.RED);
@@ -403,7 +396,8 @@ class ShaderFunctions
 
     var shader:Dynamic = null;
 
-    if (Std.isOfType(target, FlxCamera))
+    if (!Std.isOfType(target, FlxCamera)) shader = target.shader;
+    else
     {
       final daFilters = (target.filters != null) ? target.filters : [];
 
@@ -426,11 +420,7 @@ class ShaderFunctions
       else
         shader = daFilters[0].shader;
     }
-    else
-      shader = target.shader;
-
-    final returnedShader:FlxRuntimeShader = shader != null ? shader : null;
-    return shader;
+    return cast(shader, FlxRuntimeShader);
   }
   #end
 

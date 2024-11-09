@@ -172,7 +172,6 @@ class Stage extends backend.stage.base.BaseStage
   public var stageUIPrefixShit:String = '';
 
   // CountDown Stuff
-  public var stageHas3rdIntroAsset:Bool = false;
   public var stageIntroAssets:Array<String> = null;
   public var stageIntroSoundsSuffix:String = '';
   public var stageIntroSoundsPrefix:String = '';
@@ -203,7 +202,7 @@ class Stage extends backend.stage.base.BaseStage
   public function setupWeekDir(stage:String, stageDir:String)
   {
     var directory:String = 'shared';
-    var weekDir:String = stageDir;
+    final weekDir:String = stageDir;
     stageDir = null;
 
     if (weekDir != null && weekDir.length > 0) directory = weekDir;
@@ -214,15 +213,13 @@ class Stage extends backend.stage.base.BaseStage
 
   public function loadStageJson(stage:String, ?stageChanged:Bool = false)
   {
-    var stageData:StageFile = StageData.getStageFile(stage);
-    var stageDir:String = '';
+    final stageData:StageFile = StageData.getStageFile(stage);
+    final stageDir:String = stageData.directory;
     if (stageData == null)
     {
       // Stage couldn't be found, create a dummy stage for preventing a crash
       Debug.logInfo('stage failed to have .json or .json didn\'t load properly, loading stage.json....');
     }
-    stageDir = stageData.directory;
-
     if (stageChanged) setupWeekDir(stage, stageDir);
 
     camZoom = stageData.defaultZoom;
@@ -274,7 +271,7 @@ class Stage extends backend.stage.base.BaseStage
     else if (stageData.isPixelStage == true) // Backward compatibility
       PlayState.stageUI = "pixel";
 
-    hideGirlfriend = stageData.hide_girlfriend;
+    hideGirlfriend = stageData.hide_girlfriend != null ? stageData.hide_girlfriend : false;
 
     if (stageData.boyfriend != null)
     {
@@ -320,12 +317,12 @@ class Stage extends backend.stage.base.BaseStage
 
     if (stageData.objects != null && stageData.objects.length > 0)
     {
-      var list:Map<String, FlxSprite> = StageData.addObjectsToState(stageData.objects, null, null, null, null, this);
+      final list:Map<String, FlxSprite> = StageData.addObjectsToState(stageData.objects, null, null, null, null, this);
       for (key => spr in list)
         if (!StageData.reservedNames.contains(key)) swagBacks.set(key, spr);
     }
 
-    var extraData:Dynamic = stageData._extraData;
+    final extraData:Dynamic = stageData._extraData;
     if (extraData != null)
     {
       if (extraData._cameraMovement != null)
@@ -335,6 +332,9 @@ class Stage extends backend.stage.base.BaseStage
         cameraCharacters.set('girlfriend', extraData._cameraMovement.girlfriend != null ? extraData._cameraMovement.girlfriend : [50, 60]);
       }
     }
+
+    for (each in ['player', 'opponent', 'girlfriend'])
+      if (cameraCharacters.get(each) == null) cameraCharacters.set(each, [50, 60]);
 
     if (cameraCharacters.get('player') == null && cameraCharacters.get('opponent') == null && cameraCharacters.get('girlfriend') == null)
     {

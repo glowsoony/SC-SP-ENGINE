@@ -147,37 +147,17 @@ class FunkinSoundTray extends FlxSoundTray
     lerpYPos = 10;
     visible = true;
     active = true;
-    var globalVolume:Int = Math.round(FlxG.sound.volume * 10);
-
-    if (FlxG.sound.muted)
-    {
-      globalVolume = 0;
-    }
+    final globalVolume:Int = FlxG.sound.muted ? 0 : Math.round(FlxG.sound.volume * 10);
 
     if (!silent)
     {
-      var sound = null;
-      #if MODS_ALLOWED
-      sound = Paths.returnSound('sounds/soundtray/${up ? volumeUpSound : volumeDownSound}');
-      #else
-      sound = FlxAssets.getSound(up ? volumeUpSound : volumeDownSound);
-      #end
-
-      if (globalVolume == 10) sound = Paths.returnSound('sounds/soundtray/$volumeMaxSound');
-
+      final sound = globalVolume == 10 ? Paths.returnSound('sounds/soundtray/$volumeMaxSound') : #if MODS_ALLOWED Paths.returnSound('sounds/soundtray/${up ? volumeUpSound : volumeDownSound}') #else FlxAssets.getSound(up ? volumeUpSound : volumeDownSound) #end;
       if (sound != null) FlxG.sound.load(sound).play();
     }
 
     for (i in 0..._bars.length)
     {
-      if (i < globalVolume)
-      {
-        _bars[i].visible = true;
-      }
-      else
-      {
-        _bars[i].visible = false;
-      }
+      _bars[i].visible = i < globalVolume ? true : false;
     }
   }
 }

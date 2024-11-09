@@ -3,17 +3,20 @@
 * SCE brings NotITG modchart support along with many other features!
 * This engine is made with **Psych Engine**!
 
-## Credits To Other Engine / Most Engine Features And Where They Come From! (Sorry if only now the credits exist!, extermely sorry!)
+## SCE Credits:
+* Glowsoony - Programmer
+* Edwhak_Killbot - Programmer (Leader of SCE)
+* Slushi - Programmer (Has helped with the Crash Handler and a few other things! he is also a beta tester for bugs! ***thanks***)!
+
+## Credits To Other Engine / Most Engine Features And Where They Come From! (Sorry if only now the credits exist!, extermely sorry!):
 * BETADCIU Engine By Blantados [Stuff like character change and others are used from here!](https://github.com/Blantados/BETADCIU-Engine-Source/tree/main)
 * Kade stuff added from original stuff and my friend bolo! TYSM [Kade ResultsScreen and most stuff](https://github.com/BoloVEVO/Kade-Engine)
-* Newer versions of flixel fixes by system32unknown [FlxRuntimerShader, FlxAnimationController, Main](https://github.com/ShadowMario/FNF-PsychEngine/pull/13422)
 * FlxCustomColor Stuff from TheLeerName [Thanks](https://github.com/ShadowMario/FNF-PsychEngine/pull/13323)
 * Most other fixes, noteskin support, char json edits, and more all by me *glowsoony*
 * Scripting HX from codeNameEngine/Macros for compiling [Macro class, Hx Scripting, Custom Shaders, MultiFramesCollection](https://github.com/FNF-CNE-Devs/CodenameEngine) //So sorry for not crediting, I completely did plan but forgot 😭🙏
 * Lots of code from original game, V-SLICE FNF [ReflectUtil, WaveFormSprite, Audio, Scoring, Results](https://github.com/FunkinCrew/Funkin)
 * Most shaders originally from Voiid-Chronicles V2 [RayMarch, ChromaticAbberation, ThreeD, WaveCircle, etc..](https://github.com/TheZoroForce240/Voiid-Chronicles-V2-Source)
 * FPS Plus [WaveformSprite](https://github.com/ThatRozebudDude/FPS-Plus-Public)
-* [Input Rewrite! by this psych pull request!](https://github.com/ShadowMario/FNF-PsychEngine/pull/13448)
 
 ## Installation:
 You must have [the most up-to-date version of Haxe](https://haxe.org/download/), seriously, stop using 4.1.5, it messes some stuff.
@@ -47,25 +50,28 @@ to start you off, disabling Videos should be simple, simply Delete the line `"VI
 
 same goes for *Lua Scripts*, comment out or delete the line with `LUA_ALLOWED`, this and other customization options are all available within the `Project.xml` file
 
-## Credits:
-* Shadow Mario - Programmer
-* RiverOaken - Artist
+_____________________________________
 
-## SCE Credits:
-* Glowsoony - Programmer
-* Edwhak_Killbot - Programmer (Leader of SCE)
-* Slushi - Programmer (Has helped with the Crash Handler and a few other things! he is also a beta tester for bugs! ***thanks***)!
+## Psych Engine Credits:
+* Shadow Mario - Head Developer, Programmer.
+* Riveren - Main Artist.
 
-### Special Thanks
-* bbpanzu - Ex-Programmer
-* crowplexus - New Input System
-* SqirraRNG - Crash Handler and Base code for Chart Editor's Waveform
-* KadeDev - Fixed some cool stuff on Chart Editor and other PRs
-* iFlicky - Composer of Psync and Tea Time, also made the Dialogue Sounds
-* PolybiusProxy - .MP4 Video Loader Library (hxCodec)
-* Keoiki - Note Splash Animations
-* Smokey - Sprite Atlas Support
-* Nebula the Zorua - LUA JIT Fork and some Lua reworks
+### Psych Engine - Special Thanks
+* bbpanzu - Ex-Team Member (Programmer).
+* crowplexus - HScript Iris, Input System v3, and Other PRs.
+* Kamizeta - Creator of Pessy, Psych Engine's mascot.
+* MaxNeton - Loading Screen Easter Egg Artist/Animator.
+* Keoiki - Note Splash Animations and Latin Alphabet.
+* SqirraRNG - Crash Handler and Base code for Chart Editor's Waveform.
+* EliteMasterEric - Runtime Shaders support and Other PRs.
+* MAJigsaw77 - .MP4 Video Loader Library (hxvlc).
+* Tahir Toprak Karabekiroglu - Note Splash Editor and Other PRs.
+* iFlicky - Composer of Psync,  Tea Time, and some sound effects.
+* KadeDev - Fixed some issues on Chart Editor and Other PRs.
+* superpowers04 - LUA JIT Fork.
+* CheemsAndFriends - Creator of FlxAnimate.
+* Ezhalt - Pessy's Easter Egg Jingle.
+* MaliciousBunny - Video for the Final Update.
 _____________________________________
 
 # Features

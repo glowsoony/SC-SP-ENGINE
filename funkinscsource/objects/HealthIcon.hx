@@ -50,7 +50,6 @@ class HealthIcon extends FunkinSCSprite
 
   public var overrideBeatBop:Bool = false;
 
-  public var ableSizes:Array<Float> = [450, 600, 750, 900];
   public var choosenDivisionMult:Int = 3;
 
   public var divideByWidthAndHeight:Bool = false;
@@ -60,7 +59,6 @@ class HealthIcon extends FunkinSCSprite
   public var stopBop:Null<Bool> = null;
 
   private var animName:String = 'normal';
-  private var changedComplete:Bool = true;
 
   public function new(char:String = 'face', isPlayer:Bool = false, ?allowGPU:Bool = true)
   {
@@ -73,7 +71,6 @@ class HealthIcon extends FunkinSCSprite
 
   public dynamic function changeIcon(char:String, ?allowGPU:Bool = true)
   {
-    changedComplete = false;
     var name:String = 'icons/';
     var iconSuffix:String = 'icon-';
     if (!Paths.fileExists('images/' + name + char + '.png', IMAGE))
@@ -111,7 +108,6 @@ class HealthIcon extends FunkinSCSprite
       Debug.displayAlert("Error: " + e, "Couldn't find sprite and xml, nor single sprite to load!");
     }
 
-    changedComplete = true;
     this.char = char;
   }
 
@@ -183,7 +179,7 @@ class HealthIcon extends FunkinSCSprite
     {
       frames = null;
       animatedIcon = false;
-      return;
+      return false;
     }
 
     animatedIcon = true;
@@ -239,12 +235,11 @@ class HealthIcon extends FunkinSCSprite
     if (hasOffsetAnimation('winning')) hasWinningAnimated = true;
 
     json.startingAnim != null ? playAnim(json.startingAnim) : playAnim('normal', true);
+    return true;
   }
 
   public function getCharacter():String
-  {
     return char;
-  }
 
   public var autoAdjustOffset:Bool = true;
   public var autoAdjustWidth:Bool = true;
@@ -276,7 +271,7 @@ class HealthIcon extends FunkinSCSprite
 
     if (!iconStoppedBop)
     {
-      var mult:Float = FlxMath.lerp((setIconScale - 0.2), scale.x, Math.exp(-elapsed * 9 * speedBopLerp));
+      final mult:Float = FlxMath.lerp((setIconScale - 0.2), scale.x, Math.exp(-elapsed * 9 * speedBopLerp));
       scale.set(mult, mult);
       updateHitbox();
     }

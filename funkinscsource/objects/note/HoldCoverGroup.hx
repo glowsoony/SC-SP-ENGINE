@@ -31,11 +31,19 @@ class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
       addHolds(i);
   }
 
+  public dynamic function setParent()
+  {
+    for (i in 0...maxSize)
+    {
+      if (PlayState.instance != null) this.members[i].parentStrum = PlayState.instance.strumLineNotes.members[isPlayer ? i + 4 : i];
+    }
+  }
+
   public dynamic function addHolds(i:Int)
   {
-    var colors:Array<String> = ["Purple", "Blue", "Green", "Red"];
-    var hcolor:String = colors[i];
-    var hold:HoldCoverSprite = new HoldCoverSprite();
+    final colors:Array<String> = ["Purple", "Blue", "Green", "Red"];
+    final hcolor:String = colors[i];
+    final hold:HoldCoverSprite = new HoldCoverSprite();
     hold.initFrames(i, hcolor);
     hold.initAnimations(i, hcolor);
     hold.boom = false;
@@ -49,9 +57,9 @@ class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
 
   public dynamic function spawnOnNoteHit(note:Note):Void
   {
-    var noteData:Int = note.noteData;
-    var isSus:Bool = note.isSustainNote;
-    var isHoldEnd:Bool = note.isHoldEnd;
+    final noteData:Int = note.noteData;
+    final isSus:Bool = note.isSustainNote;
+    final isHoldEnd:Bool = note.isHoldEnd;
     if (enabled && isReady)
     {
       if (isSus)
@@ -69,52 +77,12 @@ class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
 
   public dynamic function despawnOnMiss(direction:Int, ?note:Note = null):Void
   {
-    var noteData:Int = (note != null ? note.noteData : direction);
+    final noteData:Int = (note != null ? note.noteData : direction);
     if (enabled && isReady) this.members[noteData].affectSplash(STOP, noteData, note);
   }
 
   public dynamic function updateHold(elapsed:Float):Void
   {
-    if (enabled && isReady)
-    {
-      for (i in 0...this.members.length)
-      {
-        if (this.members[i].x != pos(i, "x") - 110)
-        {
-          this.members[i].x = pos(i, "x") - 110;
-        }
-        if (this.members[i].y != pos(i, "y") - 100)
-        {
-          this.members[i].y = pos(i, "y") - 100;
-        }
-
-        if (this.members[i].boom)
-        {
-          if (this.members[i].isAnimationFinished())
-          {
-            this.members[i].visible = this.members[i].boom = false;
-          }
-        }
-      }
-    }
-  }
-
-  public dynamic function pos(note:Int, variable:String):Float
-  {
-    if (enabled && isReady)
-    {
-      if (PlayState.instance != null)
-      {
-        var game:PlayState = PlayState.instance;
-        if (game.strumLineNotes != null)
-        {
-          if (variable == "x") return game.strumLineNotes.members[isPlayer ? note + 4 : note].x;
-          else if (variable == "y") return game.strumLineNotes.members[isPlayer ? note + 4 : note].y;
-        }
-        return 0;
-      }
-      return 0;
-    }
-    return 0;
+    if (enabled && isReady) {}
   }
 }

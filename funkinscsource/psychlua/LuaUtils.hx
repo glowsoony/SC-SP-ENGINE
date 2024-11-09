@@ -146,7 +146,7 @@ class LuaUtils
       var target:Dynamic = null;
       if (MusicBeatState.findVariableObj(splitProps[0]))
       {
-        var retVal:Dynamic = MusicBeatState.variableMap(variable).get(splitProps[0]);
+        var retVal:Dynamic = MusicBeatState.variableMap(splitProps[0]).get(splitProps[0]);
         if (retVal != null) target = retVal;
       }
       else if (PlayState.instance.stage.swagBacks.exists(splitProps[0]))
@@ -299,7 +299,7 @@ class LuaUtils
 
   public static function setGroupStuff(leArray:Dynamic, variable:String, value:Dynamic, ?allowMaps:Bool = false)
   {
-    var split:Array<String> = variable.split('.');
+    final split:Array<String> = variable.split('.');
     if (split.length > 1)
     {
       var obj:Dynamic = Reflect.getProperty(leArray, split[0]);
@@ -317,7 +317,7 @@ class LuaUtils
 
   public static function getGroupStuff(leArray:Dynamic, variable:String, ?allowMaps:Bool = false)
   {
-    var split:Array<String> = variable.split('.');
+    final split:Array<String> = variable.split('.');
     if (split.length > 1)
     {
       var obj:Dynamic = Reflect.getProperty(leArray, split[0]);
@@ -330,6 +330,12 @@ class LuaUtils
 
     if (allowMaps && isMap(leArray)) return leArray.get(variable);
     return Reflect.getProperty(leArray, variable);
+  }
+
+  public static function getObjectLoop(objectName:String, ?allowMaps:Bool = false):Dynamic
+  {
+    final split:Array<String> = objectName.split('.');
+    return split.length > 1 ? getVarInArray(getPropertyLoop(split, true, allowMaps), split[split.length - 1], allowMaps) : getObjectDirectly(objectName);
   }
 
   public static function getPropertyLoop(split:Array<String>, ?getProperty:Bool = true, ?allowMaps:Bool = false):Dynamic
@@ -358,13 +364,13 @@ class LuaUtils
       default:
         var obj:Dynamic = null;
 
-        if (MusicBeatState.findVariableObj(objectName)) obj = MusicBeatState.variableObj(objectName);
+        if (MusicBeatState.findVariableObj(objectName)) obj = MusicBeatState.variableMap(objectName).get(objectName);
         else if (Stage.instance.swagBacks.exists(objectName)) obj = Stage.instance.swagBacks.get(objectName);
         else if (Stage.instance.swagGroups.exists(objectName)) obj = Stage.instance.swagGroups.get(objectName);
         else if (PlayState.instance.stage.swagBacks.exists(objectName)) obj = PlayState.instance.stage.swagBacks.get(objectName);
         else if (PlayState.instance.stage.swagGroups.exists(objectName)) obj = PlayState.instance.stage.swagGroups.get(objectName);
 
-        if (obj == null) obj = getVarInArray(MusicBeatState.getState(), objectName, allowMaps);
+        if (obj == null) obj = getVarInArray(getTargetInstance(), objectName, allowMaps);
         if (obj == null) obj = getActorByName(objectName);
         return obj;
     }
@@ -586,13 +592,7 @@ class LuaUtils
   }
 
   public static function tweenPrepare(tag:String, vars:String)
-  {
-    if (tag != null) cancelTween(tag);
-    var variables:Array<String> = vars.split('.');
-    var sexyProp:Dynamic = getObjectDirectly(variables[0]);
-    if (variables.length > 1) sexyProp = getVarInArray(getPropertyLoop(variables), variables[variables.length - 1]);
-    return sexyProp;
-  }
+    return getObjectLoop(vars);
 
   public static function getBuildTarget():String
   {
@@ -1405,39 +1405,16 @@ class LuaUtils
           return array2;
         }
         else
-        {
-          var array:Array<String> = v.split(',');
-          return array;
-        }
+          return v.split(',');
       }
-      else if (type == 'float')
-      {
-        return Std.parseFloat(v);
-      }
-      else if (type == 'int')
-      {
-        return Std.parseInt(v);
-      }
-      else if (type == 'bool')
-      {
-        if (v == 'true')
-        {
-          return true;
-        }
-        else
-        {
-          return false;
-        }
-      }
+      else if (type == 'float') return Std.parseFloat(v);
+      else if (type == 'int') return Std.parseInt(v);
+      else if (type == 'bool') return v == 'true' ? true : false;
       else
-      {
         return v;
-      }
     }
     else
-    {
       return v;
-    }
   }
   #end
 

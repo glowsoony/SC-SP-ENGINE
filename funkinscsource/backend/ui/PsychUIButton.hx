@@ -13,6 +13,14 @@ class PsychUIButton extends FlxSpriteGroup
 
   public var onChangeState:String->Void;
   public var onClick:Void->Void;
+  public var disabled(default, set):Bool = false;
+
+  function set_disabled(value:Bool):Bool
+  {
+    disabled = value;
+    PsychUIUtil.disableMembers(members, disabled);
+    return disabled;
+  }
 
   public var clickStyle:UIStyleData =
     {
@@ -60,6 +68,8 @@ class PsychUIButton extends FlxSpriteGroup
   override function update(elapsed:Float)
   {
     super.update(elapsed);
+
+    if (disabled) return;
 
     if (_firstFrame)
     {

@@ -49,6 +49,7 @@ class HoldCoverSprite extends FunkinSCSprite
     }
   public var offsetX:Float = 0;
   public var offsetY:Float = 0;
+  public var parentStrum:StrumArrow;
 
   public dynamic function initShader(noteData:Int)
   {
@@ -58,50 +59,42 @@ class HoldCoverSprite extends FunkinSCSprite
 
   public dynamic function initFrames(i:Int, hcolor:String)
   {
+    var holdCoverSkin:String = "holdCover";
+    var changeHoldCover:Bool = false;
+    var holdCoverSkinNonRGB:Bool = false;
     if (PlayState.SONG != null)
     {
-      var changeHoldCover:Bool = (PlayState.SONG.options.holdCoverSkin != null
+      // Check Stuff
+      changeHoldCover = (PlayState.SONG.options.holdCoverSkin != null
         && PlayState.SONG.options.holdCoverSkin != "default"
+        && PlayState.SONG.options.holdCoverSkin != "holdCover"
         && PlayState.SONG.options.holdCoverSkin != "");
 
+      holdCoverSkinNonRGB = PlayState.SONG.options.disableHoldCoversRGB;
+
       // Before replace
-      var holdCoverSkin:String = (changeHoldCover ? PlayState.SONG.options.holdCoverSkin : 'holdCover');
-
-      this.skin = holdCoverSkin;
-
-      var foundFirstPath:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/HoldNoteEffect/RGB/$holdCoverSkin$hcolor.png', IMAGE))
-        || #end Assets.exists(Paths.getPath('images/HoldNoteEffect/RGB/$holdCoverSkin$hcolor.png', IMAGE));
-      var foundSecondPath:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/HoldNoteEffect/$holdCoverSkin$hcolor.png', IMAGE))
-        || #end Assets.exists(Paths.getPath('images/HoldNoteEffect/$holdCoverSkin$hcolor.png', IMAGE));
-      var foundThirdPath:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/$holdCoverSkin$hcolor.png',
-        TEXT)) || #end Assets.exists(Paths.getPath('images/$holdCoverSkin$hcolor.png', TEXT));
-
-      if (frames == null)
-      {
-        if (foundFirstPath)
-        {
-          var holdCoverSkinNonRGB:Bool = PlayState.SONG.options.disableHoldCoversRGB;
-          this.frames = Paths.getSparrowAtlas(holdCoverSkinNonRGB ? 'HoldNoteEffect/$holdCoverSkin$hcolor' : 'HoldNoteEffect/RGB/$holdCoverSkin$hcolor');
-          if (!holdCoverSkinNonRGB) this.initShader(i);
-        }
-        else if (foundSecondPath)
-        {
-          this.frames = Paths.getSparrowAtlas('HoldNoteEffect/$holdCoverSkin$hcolor');
-        }
-        else if (foundThirdPath)
-        {
-          this.frames = Paths.getSparrowAtlas('$holdCoverSkin$hcolor');
-        }
-        else
-        {
-          this.frames = Paths.getSparrowAtlas('HoldNoteEffect/holdCover$hcolor');
-        }
-      }
+      holdCoverSkin = (changeHoldCover ? PlayState.SONG.options.holdCoverSkin : 'holdCover');
     }
-    else
+    this.skin = holdCoverSkin;
+
+    final foundFirstPath:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/HoldNoteEffect/RGB/$holdCoverSkin$hcolor.png', IMAGE))
+      || #end Assets.exists(Paths.getPath('images/HoldNoteEffect/RGB/$holdCoverSkin$hcolor.png', IMAGE));
+    final foundSecondPath:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/HoldNoteEffect/$holdCoverSkin$hcolor.png', IMAGE))
+      || #end Assets.exists(Paths.getPath('images/HoldNoteEffect/$holdCoverSkin$hcolor.png', IMAGE));
+    final foundThirdPath:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/$holdCoverSkin$hcolor.png',
+      TEXT)) || #end Assets.exists(Paths.getPath('images/$holdCoverSkin$hcolor.png', TEXT));
+
+    if (frames == null)
     {
-      this.skin = "holdCover";
-      this.frames = Paths.getSparrowAtlas('HoldNoteEffect/holdCover$hcolor');
+      if (foundFirstPath)
+      {
+        this.frames = Paths.getSparrowAtlas(holdCoverSkinNonRGB ? 'HoldNoteEffect/$holdCoverSkin$hcolor' : 'HoldNoteEffect/RGB/$holdCoverSkin$hcolor');
+        if (!holdCoverSkinNonRGB) this.initShader(i);
+      }
+      else if (foundSecondPath) this.frames = Paths.getSparrowAtlas('HoldNoteEffect/$holdCoverSkin$hcolor');
+      else if (foundThirdPath) this.frames = Paths.getSparrowAtlas('$holdCoverSkin$hcolor');
+      else
+        this.frames = Paths.getSparrowAtlas('HoldNoteEffect/holdCover$hcolor');
     }
   }
 
@@ -157,5 +150,12 @@ class HoldCoverSprite extends FunkinSCSprite
         boom = true;
         playAnim(Std.string(noteData) + 'p');
     }
+  }
+
+  override public function update(elapsed)
+  {
+    super.update(elapsed);
+    if (parentStrum != null) setPosition(parentStrum.x - 110 + offsetX, parentStrum.y - 100 + offsetY);
+    if (this.boom && this.isAnimationFinished()) this.visible = this.boom = false;
   }
 }

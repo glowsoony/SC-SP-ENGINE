@@ -125,11 +125,11 @@ class CoolUtil
       // alpha stuff
       if (color.length == 10)
       {
-        var alphaHex:String = color.substr(2, 2);
+        final alphaHex:String = color.substr(2, 2);
         alpha = Std.parseInt("0x" + alphaHex) / 255.0;
       }
 
-      color = color.substring(color.length - 6);
+      color = color.substring(color.length - (color.length >= 10 ? 8 : 6));
     }
 
     var colorNum:Null<FlxColor> = FlxColor.fromString(color);

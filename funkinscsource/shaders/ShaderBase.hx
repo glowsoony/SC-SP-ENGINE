@@ -11,6 +11,11 @@ class ShaderBase
 
   public function new(file:String)
   {
+    if (!ClientPrefs.data.shaders)
+    {
+      shader = null;
+      return;
+    }
     final fragShaderPath:String = Paths.shaderFragment(file);
     final vertShaderPath:String = Paths.shaderVertex(file);
     final fragCode:String = getCode(fragShaderPath);

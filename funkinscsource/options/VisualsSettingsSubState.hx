@@ -41,7 +41,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
       var splash:NoteSplash = new NoteSplash();
       splash.noteData = i;
       splash.setPosition(note.x, noteY);
-      splash.loadSplash();
+      splash.loadSplash('noteSplashes/noteSplashes' + NoteSplash.getSplashSkinPostfix());
       splash.visible = false;
       splash.alpha = ClientPrefs.data.splashAlpha;
       splash.animation.finishCallback = function(name:String) splash.visible = false;
@@ -196,6 +196,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
     var option:Option = new Option('Color Notes A Way', 'What kinda of RGB note coloring !(only if RGB shader is active)!', 'colorNoteType', STRING,
       ['None', 'Quant', 'Rainbow']);
+    addOption(option);
 
     super();
     add(notes);
@@ -274,7 +275,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
   function onChangeSplashSkin()
   {
     for (splash in splashes)
-      splash.loadSplash();
+      splash.loadSplash('noteSplashes/noteSplashes' + NoteSplash.getSplashSkinPostfix());
     playNoteSplashes();
   }
 

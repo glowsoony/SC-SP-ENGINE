@@ -322,7 +322,7 @@ class Paths
     }
   }
 
-  inline static public function getFolderPath(file:String, folder = "shared")
+  inline public static function getFolderPath(file:String, folder = "shared")
     return 'assets/$folder/$file';
 
   inline public static function getSharedPath(file:String = ''):String
@@ -531,11 +531,12 @@ class Paths
 
   inline static public function font(key:String):String
   {
+    final folderKey:String = Language.getFileTranslation('data/fonts/$key');
     #if MODS_ALLOWED
-    final file:String = modsFont(key);
+    final file:String = modFolders(folderKey);
     if (FileSystem.exists(file)) return file;
     #end
-    return 'assets/shared/data/fonts/$key';
+    return 'assets/shared/$folderKey';
   }
 
   public static function fileExists(key:String, type:AssetType, ?ignoreMods:Bool = false, ?parentfolder:String = null)
@@ -914,9 +915,6 @@ class Paths
   #if MODS_ALLOWED
   inline static public function mods(key:String = ''):String
     return 'mods/' + key;
-
-  inline static public function modsFont(key:String):String
-    return modFolders('data/fonts/' + key);
 
   inline static public function modsJson(key:String):String
     return modFolders('data/' + key + '.json');

@@ -616,9 +616,9 @@ class Note extends ModchartArrow implements ICloneable<Note>
             {
               scale.y /= PlayState.daPixelZoom;
               scale.y *= 0.7;
-            }
 
-            offsetX += 3;
+              offsetX += 3;
+            }
           }
 
           if (becomePixelNote && !wasPixelNote) // fixes the scaling
@@ -629,9 +629,9 @@ class Note extends ModchartArrow implements ICloneable<Note>
               else
                 scale.y /= 0.7;
               scale.y *= PlayState.daPixelZoom;
-            }
 
-            offsetX -= 3;
+              offsetX -= 3;
+            }
           }
         }
       }
@@ -815,9 +815,9 @@ class Note extends ModchartArrow implements ICloneable<Note>
     {
       canBeHit = false;
 
-      if (strumTime < Conductor.songPosition + (Conductor.safeZoneOffset * earlyHitMult))
+      if (!wasGoodHit && strumTime <= Conductor.songPosition)
       {
-        if ((isSustainNote && prevNote.wasGoodHit) || strumTime <= Conductor.songPosition) wasGoodHit = true;
+        if (!isSustainNote || (prevNote.wasGoodHit && !ignoreNote)) wasGoodHit = true;
       }
     }
   }
@@ -864,7 +864,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
   public dynamic function clipToStrumArrow(myStrum:StrumArrow)
   {
     var center:Float = myStrum.y + offsetY + swagWidth / 2;
-    if (isSustainNote && (mustPress || !ignoreNote) && (!mustPress || (wasGoodHit || (prevNote.wasGoodHit && !canBeHit))))
+    if ((mustPress || !ignoreNote) && (wasGoodHit || (prevNote.wasGoodHit && !canBeHit)))
     {
       var swagRect:FlxRect = clipRect;
       if (swagRect == null) swagRect = new FlxRect(0, 0, frameWidth, frameHeight);
@@ -995,7 +995,9 @@ class Note extends ModchartArrow implements ICloneable<Note>
         .get(animation.curAnim.name)
         .get(animation.curAnim.curFrame)
         .indexOf(alpha);
-      gpix = glist[indexes.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame)[dex]];
+      gpix = glist[
+        indexes.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame)[dex]
+      ];
       oalp = alpha;
       oanim = animation.curAnim.name;
     }
@@ -1049,5 +1051,109 @@ class Note extends ModchartArrow implements ICloneable<Note>
     hasSetupRender = false;
     drawManual = false;
     super.destroy();
+  }
+
+  public dynamic function setCustomColors(type:String)
+  {
+    final doesNotReturn:Bool = customColorsOnNotes && rgbShader.enabled;
+    if (!doesNotReturn) return;
+
+    final bpmChanges = Conductor.bpmChangeMap;
+    var time:Float = 0;
+    var currentBPM:Float = PlayState.SONG.bpm;
+    var newTime:Float = 0;
+    var beat:Float = 0;
+    var colR:FlxColor = 0x000000;
+    var colG:FlxColor = 0x000000;
+    var colB:FlxColor = 0x000000;
+
+    time = this.strumTime;
+    newTime = time;
+    for (i in 0...bpmChanges.length)
+      if (strumTime > bpmChanges[i].songTime)
+      {
+        currentBPM = bpmChanges[i].bpm;
+        newTime = time - bpmChanges[i].songTime;
+      }
+
+    beat = utils.MathUtil.round(((currentBPM * (newTime - backend.ClientPrefs.data.noteOffset)) / 1000 / 60) * 48, 0);
+
+    switch (type)
+    {
+      case 'Quant':
+        if (!isSustainNote)
+        {
+          if (beat % (192 / 4) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[0][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[0][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[0][2];
+          }
+          else if (beat % (192 / 8) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[1][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[1][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[1][2];
+          }
+          else if (beat % (192 / 12) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[2][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[2][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[2][2];
+          }
+          else if (beat % (192 / 16) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[3][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[3][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[3][2];
+          }
+          else if (beat % (192 / 20) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[4][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[4][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[4][2];
+          }
+          else if (beat % (192 / 24) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[5][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[5][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[5][2];
+          }
+          else if (beat % (192 / 28) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[6][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[6][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[6][2];
+          }
+          else if (beat % (192 / 32) == 0)
+          {
+            colR = ClientPrefs.data.arrowRGBQuantize[7][0];
+            colG = ClientPrefs.data.arrowRGBQuantize[7][1];
+            colB = ClientPrefs.data.arrowRGBQuantize[7][2];
+          }
+          else
+          {
+            colR = 0xFF7C7C7C;
+            colG = 0xFFFFFFFF;
+            colB = 0xFF3A3A3A;
+          }
+          rgbShader.r = colR;
+          rgbShader.g = colG;
+          rgbShader.b = colB;
+        }
+        else
+        {
+          rgbShader.r = prevNote.rgbShader.r;
+          rgbShader.g = prevNote.rgbShader.g;
+          rgbShader.b = prevNote.rgbShader.b;
+        }
+      case 'Rainbow': // Code borrowed from JS Engine
+        var superCoolColor = new FlxColor(0xFFFF0000);
+        superCoolColor.hue = (strumTime / 5000 * 360) % 360;
+        var coolDarkColor = superCoolColor;
+        rgbShader.r = superCoolColor;
+        rgbShader.g = FlxColor.WHITE;
+        rgbShader.b = superCoolColor.getDarkened(0.7);
+    }
   }
 }

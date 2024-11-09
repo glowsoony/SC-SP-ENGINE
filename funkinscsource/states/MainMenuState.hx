@@ -11,12 +11,22 @@ import flixel.input.mouse.FlxMouseEvent;
 import lime.app.Application;
 import states.editors.MasterEditorMenu;
 import options.OptionsState;
+import flixel.FlxG;
+import flixel.tweens.FlxTween;
+import states.MusicBeatState.subStates;
+import states.MusicBeatState;
 
 enum MainMenuColumn
 {
   LEFT;
   CENTER;
   RIGHT;
+}
+
+class FlxMenuSprite extends FlxSprite
+{
+  // A sort of tag
+  public var item:String = '';
 }
 
 class MainMenuState extends MusicBeatState
@@ -28,9 +38,9 @@ class MainMenuState extends MusicBeatState
 
   var allowMouse:Bool = true; // Turn this off to block mouse movement in menus
 
-  var menuItems:FlxTypedGroup<FlxSprite>;
-  var leftItem:FlxSprite;
-  var rightItem:FlxSprite;
+  var menuItems:FlxTypedGroup<FlxMenuSprite>;
+  var leftItem:FlxMenuSprite;
+  var rightItem:FlxMenuSprite;
 
   var gameJoltButton:FlxSprite;
 
@@ -103,12 +113,12 @@ class MainMenuState extends MusicBeatState
     FlxTween.tween(grid, {alpha: 0.56}, 0.5, {ease: FlxEase.quadOut});
     add(grid);
 
-    menuItems = new FlxTypedGroup<FlxSprite>();
+    menuItems = new FlxTypedGroup<FlxMenuSprite>();
     add(menuItems);
 
     for (num => option in optionShit)
     {
-      var item:FlxSprite = createMenuItem(option, 60 * num, (num * 140) + 90);
+      var item:FlxMenuSprite = createMenuItem(option, 60 * num, (num * 140) + 90);
       item.y += (4 - optionShit.length) * 70; // Offsets for when you have anything other than 4 items
       item.screenCenter(X);
     }
@@ -120,6 +130,12 @@ class MainMenuState extends MusicBeatState
     }
 
     if (leftOption != null) leftItem = createMenuItem(leftOption, 60, 490, true);
+
+    final checkBoxText:PsychUICheckBoxTest = new PsychUICheckBoxTest(rightItem.x, rightItem.y - 200, 'Grid Visible?', 100, () -> {
+      grid.visible = !grid.visible;
+    });
+    checkBoxText.scrollFactor.set();
+    add(checkBoxText);
 
     final sceVersion:FlxText = new FlxText(12, FlxG.height - 64, 0, "SCE v" + SCEVersion, 16);
     sceVersion.active = false;
@@ -161,9 +177,9 @@ class MainMenuState extends MusicBeatState
     FlxG.camera.follow(camFollowPos, null, 0.15);
   }
 
-  function createMenuItem(name:String, x:Float, y:Float, looping:Bool = false):FlxSprite
+  function createMenuItem(name:String, x:Float, y:Float, looping:Bool = false):FlxMenuSprite
   {
-    var menuItem:FlxSprite = new FlxSprite(x, y);
+    var menuItem:FlxMenuSprite = new FlxMenuSprite(x, y);
     menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_$name');
     menuItem.animation.addByPrefix('idle', '$name idle', 24, true);
     menuItem.animation.addByPrefix('selected', '$name selected', 24, !looping);
@@ -172,6 +188,7 @@ class MainMenuState extends MusicBeatState
 
     menuItem.antialiasing = ClientPrefs.data.antialiasing;
     menuItem.scrollFactor.set();
+    menuItem.item = name;
     menuItems.add(menuItem);
     return menuItem;
   }
@@ -225,7 +242,7 @@ class MainMenuState extends MusicBeatState
         FlxG.mouse.visible = true;
         timeNotMoving = 0;
 
-        var selectedItem:FlxSprite;
+        var selectedItem:FlxMenuSprite;
         switch (curColumn)
         {
           case CENTER:
@@ -347,7 +364,7 @@ class MainMenuState extends MusicBeatState
 
           if (ClientPrefs.data.flashing) FlxFlicker.flicker(magenta, 1.1, 0.15, false);
 
-          var item:FlxSprite;
+          var item:FlxMenuSprite;
           var option:String;
           switch (curColumn)
           {
@@ -384,8 +401,8 @@ class MainMenuState extends MusicBeatState
               case 'credits':
                 MusicBeatState.switchState(new CreditsState());
               case 'options':
-                MusicBeatState.switchState(new OptionsState());
-                OptionsState.onPlayState = false;
+                MusicBeatState.switchState(new OptionsDirect());
+                // OptionsState.onPlayState = false;
                 if (PlayState.SONG != null)
                 {
                   PlayState.SONG.options.arrowSkin = null;
@@ -397,11 +414,7 @@ class MainMenuState extends MusicBeatState
             }
           });
 
-          for (memb in menuItems)
-          {
-            if (memb == item) continue;
-            FlxTween.tween(memb, {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
-          }
+          itemsEffect(item, option);
         }
         else
           CoolUtil.browserLoad('https://ninja-muffin24.itch.io/funkin');
@@ -417,6 +430,110 @@ class MainMenuState extends MusicBeatState
     }
 
     super.update(elapsed);
+  }
+
+  function itemsEffect(selectedItem:FlxMenuSprite, chosen:String)
+  {
+    for (memb in menuItems)
+    {
+      if (memb == selectedItem) continue;
+      // FlxTween.tween(FlxG.camera, {zoom: FlxG.camera.zoom + 0.2}, 0.6, {ease: utils.EaseUtil.pop});
+      switch (chosen)
+      {
+        case 'story_mode':
+          switch (memb.item)
+          {
+            case 'freeplay':
+              FlxTween.tween(memb, {y: memb.y + 1000}, 0.6, {ease: utils.EaseUtil.bell});
+            #if MODS_ALLOWED
+            case 'mods':
+              FlxTween.tween(memb, {y: memb.y + 700}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            case 'credits':
+              FlxTween.tween(memb, {y: memb.y + 300}, 0.6, {ease: utils.EaseUtil.bell});
+            case 'options':
+              FlxTween.tween(memb, {x: memb.x + 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #if ACHIEVEMENTS_ALLOWED
+            case 'achievements':
+              FlxTween.tween(memb, {x: memb.x - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+          }
+        case 'freeplay':
+          switch (memb.item)
+          {
+            case 'story_mode':
+              FlxTween.tween(memb, {y: memb.y - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #if MODS_ALLOWED
+            case 'mods':
+              FlxTween.tween(memb, {y: memb.y + 700}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            case 'credits':
+              FlxTween.tween(memb, {y: memb.y + 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #if ACHIEVEMENTS_ALLOWED
+            case 'achievements':
+              FlxTween.tween(memb, {x: memb.x - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            case 'options':
+              FlxTween.tween(memb, {x: memb.x + 300}, 0.6, {ease: utils.EaseUtil.bell});
+          }
+        #if MODS_ALLOWED
+        case 'mods':
+          switch (memb.item)
+          {
+            case 'story_mode':
+              FlxTween.tween(memb, {y: memb.y - 600}, 0.6, {ease: utils.EaseUtil.bell});
+            case 'freeplay':
+              FlxTween.tween(memb, {y: memb.y - 900}, 0.6, {ease: utils.EaseUtil.bell});
+            case 'credits':
+              FlxTween.tween(memb, {y: memb.y + 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #if ACHIEVEMENTS_ALLOWED
+            case 'achievements':
+              FlxTween.tween(memb, {x: memb.x - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            case 'options':
+              FlxTween.tween(memb, {x: memb.x + 300}, 0.6, {ease: utils.EaseUtil.bell});
+          }
+        #end
+        case 'credits':
+          switch (memb.item)
+          {
+            case 'story_mode':
+              FlxTween.tween(memb, {y: memb.y - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            case 'freeplay':
+              FlxTween.tween(memb, {y: memb.y - 700}, 0.6, {ease: utils.EaseUtil.bell});
+            #if MODS_ALLOWED
+            case 'mods':
+              FlxTween.tween(memb, {y: memb.y - 1000}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            #if ACHIEVEMENTS_ALLOWED
+            case 'achievements':
+              FlxTween.tween(memb, {x: memb.x - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            case 'options':
+              FlxTween.tween(memb, {x: memb.x + 300}, 0.6, {ease: utils.EaseUtil.bell});
+          }
+        case 'options':
+          switch (memb.item)
+          {
+            #if ACHIEVEMENTS_ALLOWED
+            case 'achievements':
+              FlxTween.tween(memb, {x: memb.x - 300}, 0.6, {ease: utils.EaseUtil.bell});
+            #end
+            default:
+              FlxTween.tween(memb, {y: memb.y + 1800}, 0.6, {ease: utils.EaseUtil.bell});
+          }
+        #if ACHIEVEMENTS_ALLOWED
+        case 'achievements':
+          switch (memb.item)
+          {
+            case 'options':
+              FlxTween.tween(memb, {x: memb.x + 300}, 0.6, {ease: utils.EaseUtil.bell});
+            default:
+              FlxTween.tween(memb, {y: memb.y + 1800}, 0.6, {ease: utils.EaseUtil.bell});
+          }
+        #end
+      }
+    }
   }
 
   override function beatHit()
@@ -447,7 +564,7 @@ class MainMenuState extends MusicBeatState
       item.centerOffsets();
     }
 
-    var selectedItem:FlxSprite;
+    var selectedItem:FlxMenuSprite;
     switch (curColumn)
     {
       case CENTER:
@@ -459,6 +576,81 @@ class MainMenuState extends MusicBeatState
     }
     selectedItem.animation.play('selected');
     selectedItem.centerOffsets();
-    camFollow.y = selectedItem.getGraphicMidpoint().y;
+
+    switch (selectedItem.item)
+    {
+      case 'story_mode':
+        camFollow.y = selectedItem.getGraphicMidpoint().y - 70;
+      case 'freeplay':
+        camFollow.y = selectedItem.getGraphicMidpoint().y + 40;
+      #if MODS_ALLOWED
+      case 'mods':
+        camFollow.y = selectedItem.getGraphicMidpoint().y + 70;
+      #end
+      case 'credits':
+        camFollow.y = selectedItem.getGraphicMidpoint().y + 420;
+      #if ACHIEVEMENTS_ALLOWED
+      case 'achievements':
+        camFollow.y = selectedItem.getGraphicMidpoint().y + 30;
+        camFollow.x = selectedItem.getGraphicMidpoint().x + 70;
+      #end
+      case 'options':
+        camFollow.y = selectedItem.getGraphicMidpoint().y + 30;
+        camFollow.x = selectedItem.getGraphicMidpoint().x - 90;
+    }
+  }
+}
+
+class OptionsDirect extends MusicBeatState
+{
+  var menuBG:FlxSprite;
+
+  public static var instance:OptionsDirect = null;
+
+  var colorArray:Array<FlxColor> = [
+    FlxColor.fromRGB(148, 0, 211),
+    FlxColor.fromRGB(75, 0, 130),
+    FlxColor.fromRGB(0, 0, 255),
+    FlxColor.fromRGB(0, 255, 0),
+    FlxColor.fromRGB(255, 255, 0),
+    FlxColor.fromRGB(255, 127, 0),
+    FlxColor.fromRGB(255, 0, 0)
+  ];
+
+  override function create()
+  {
+    instance = this;
+    FlxG.camera.fade(FlxColor.BLACK, 0.8, true);
+    Paths.clearStoredMemory();
+    Paths.clearUnusedMemory();
+    subStates.push(new options.OptionsMenu());
+    menuBG = new FlxSprite().loadGraphic(Paths.image("menuDesat"));
+    menuBG.color = 0xFFea71fd;
+    menuBG.setGraphicSize(Std.int(menuBG.width * 1.1));
+    menuBG.updateHitbox();
+    menuBG.screenCenter();
+    menuBG.antialiasing = ClientPrefs.data.antialiasing;
+    add(menuBG);
+
+    tweenColorShit();
+
+    super.create();
+
+    openSubState(subStates[0]);
+  }
+
+  function tweenColorShit()
+  {
+    var beforeInt = FlxG.random.int(0, 6);
+    var randomInt = FlxG.random.int(0, 6);
+
+    FlxTween.color(menuBG, 4, menuBG.color, colorArray[beforeInt],
+      {
+        onComplete: function(twn) {
+          if (beforeInt != randomInt) beforeInt = randomInt;
+
+          tweenColorShit();
+        }
+      });
   }
 }

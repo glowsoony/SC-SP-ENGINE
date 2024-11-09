@@ -57,7 +57,6 @@ class HScript extends Iris
     }
     else
     {
-      hs.varsToBring = varsToBring;
       var prevCode:String = hs.scriptCode;
       try
       {
@@ -66,6 +65,7 @@ class HScript extends Iris
           hs.scriptCode = code;
           hs.parse(true);
         }
+        hs.varsToBring = varsToBring;
         hs.returnValue = hs.execute();
         return hs.returnValue;
       }

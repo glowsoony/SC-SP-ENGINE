@@ -120,9 +120,9 @@ class DialogueCharacter extends FlxSprite
     if (dialogueAnimations.exists(leAnim))
     {
       var anim:DialogueAnimArray = dialogueAnimations.get(leAnim);
-      if (playIdle) offset.set(anim.idle_offsets[0], anim.idle_offsets[1]);
+      if (playIdle) offset.set(anim.idle_offsets[0] * scale.x, anim.idle_offsets[1] * scale.y);
       else
-        offset.set(anim.loop_offsets[0], anim.loop_offsets[1]);
+        offset.set(anim.loop_offsets[0] * scale.x, anim.loop_offsets[1] * scale.y);
     }
     else
     {

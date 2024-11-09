@@ -5,26 +5,89 @@ import psychlua.ModchartSprite;
 
 typedef StageFile =
 {
+  /**
+   * Folder / Week (Asset Weeks) to get things from.
+   */
   var directory:String;
+
+  /**
+   * Default camera zoom the stage has.
+   */
   var defaultZoom:Float;
+
+  /**
+   * Wether the stage is pixel or not.
+   */
   var ?isPixelStage:Null<Bool>;
+
+  /**
+   * Descarded/Unused (Stage UI) Ex. Normal, Pixel
+   */
   var stageUI:String;
 
+  /**
+   * Player's X and Y positions offset.
+   */
   var boyfriend:Array<Dynamic>;
-  var girlfriend:Array<Dynamic>;
-  var opponent:Array<Dynamic>;
-  var ?opponent2:Array<Dynamic>;
-  var hide_girlfriend:Bool;
 
+  /**
+   * Girlfriend's X and Y positions offset.
+   */
+  var girlfriend:Array<Dynamic>;
+
+  /**
+   * Opponent's X and Y positions offset.
+   */
+  var opponent:Array<Dynamic>;
+
+  /**
+   * "Mom's" X and Y positions offset.
+   */
+  var ?opponent2:Array<Dynamic>;
+
+  /**
+   * To wether hide girlfriend or not.
+   */
+  var hide_girlfriend:Null<Bool>;
+
+  /**
+   * Player's camera offset.
+   */
   var ?camera_boyfriend:Array<Float>;
+
+  /**
+   * Opponent's camera offset.
+   */
   var ?camera_opponent:Array<Float>;
+
+  /**
+   * "Mom's" camera offset.
+   */
   var ?camera_opponent2:Array<Float>;
+
+  /**
+   * Girlfriend's camera offset.
+   */
   var ?camera_girlfriend:Array<Float>;
+
+  /**
+   * Camera's follow speed.
+   */
   var ?camera_speed:Null<Float>;
 
+  /**
+   * Where the skin is from.
+   */
   var ?ratingSkin:Array<String>;
+
+  /**
+   * What the countDown Assets will be.
+   */
   var ?countDownAssets:Array<String>;
-  var ?has3rdIntroAsset:Bool;
+
+  /**
+   * Scales for the rating objects. Ex: [[1, 1], [1, 1], [1, 1], [1, 1]]
+   */
   var ?ratingScales:Array<Float>;
 
   /**
@@ -85,11 +148,11 @@ typedef StageFile =
 
 enum abstract LoadFilters(Int) from Int from UInt to Int to UInt
 {
-  var LOW_QUALITY:Int = (1 << 0);
-  var HIGH_QUALITY:Int = (1 << 1);
+  var LOW_QUALITY:Int = (1 << 0); // 1
+  var HIGH_QUALITY:Int = (1 << 1); // 2
 
-  var STORY_MODE:Int = (1 << 2);
-  var FREEPLAY:Int = (1 << 3);
+  var STORY_MODE:Int = (1 << 2); // 4
+  var FREEPLAY:Int = (1 << 3); // 8
 }
 
 class StageData
@@ -114,8 +177,7 @@ class StageData
       camera_speed: 1,
 
       ratingSkin: ['', ''],
-      countDownAssets: ['ready', 'set', 'go'],
-      has3rdIntroAsset: false,
+      countDownAssets: ['ready', 'set', 'go']
 
       introSoundsPrefix: "",
       introSoundsSuffix: "",
@@ -148,13 +210,10 @@ class StageData
 
   public static function loadDirectory(SONG:SwagSong)
   {
-    var stage:String = '';
-    if (SONG.stage != null) stage = SONG.stage;
-    else if (Song.loadedSongName != null) stage = vanillaSongStage(Paths.formatToSongPath(Song.loadedSongName));
-    else
-      stage = 'mainStage';
+    final stage:String = if (SONG.stage != null) SONG.stage else if (Song.loadedSongName != null)
+      vanillaSongStage(Paths.formatToSongPath(Song.loadedSongName)) else 'mainStage';
 
-    var stageFile:StageFile = getStageFile(stage);
+    final stageFile:StageFile = getStageFile(stage);
     forceNextDirectory = (stageFile != null) ? stageFile.directory : ''; // preventing crashes
   }
 
@@ -162,7 +221,7 @@ class StageData
   {
     try
     {
-      var path:String = Paths.getPath('data/stages/' + stage + '.json', TEXT, null, true);
+      final path:String = Paths.getPath('data/stages/' + stage + '.json', TEXT, null, true);
       #if MODS_ALLOWED
       if (FileSystem.exists(path)) return cast tjson.TJSON.parse(File.getContent(path));
       #else
@@ -176,6 +235,7 @@ class StageData
   {
     switch (songName)
     {
+      // Vanilla FNF Stages
       case 'spookeez', 'south', 'monster':
         return 'spookyMansion';
       case 'pico', 'blammed', 'philly', 'philly-nice':

@@ -1,5 +1,6 @@
-package options;
+package backend.ui;
 
+import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import flixel.addons.display.FlxBackdrop;
 import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.display.shapes.FlxShapeCircle;
@@ -12,54 +13,83 @@ import objects.note.Note;
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
 
-class NotesColorSubState extends MusicBeatSubState
+class PsychUINoteColors extends FlxSpriteGroup
 {
-  var onModeColumn:Bool = true;
-  var curSelectedMode:Int = 0;
-  var curSelectedNote:Int = 0;
-  var onPixel:Bool = false;
-  var dataArray:Array<Array<FlxColor>>;
+  public static final COPY_EVENT = "copy_change";
+  public static final PASTE_EVENT = "paste_change";
+  public static final MODE_EVENT = "mode_change";
+  public static final NOTE_EVENT = "note_change";
+  public static final NOTESKIN_EVENT = "noteskin_change";
+  public static final SHADER_EVENT = "colorshader_change";
+  public static final COLORWHEEL_EVENT = "colorwheel_change";
+  public static final COLORGRADIENT_EVENT = "colorgradient_change";
+  public static final COLORPALETTE_EVENT = "colorpalette_change";
+  public static final RESET_EVENT = "reset_change";
 
-  var hexTypeLine:FlxSprite;
-  var hexTypeNum:Int = -1;
-  var hexTypeVisibleTimer:Float = 0;
+  public var onModeColumn:Bool = true;
+  public var curSelectedMode:Int = 0;
+  public var curSelectedNote:Int = 0;
+  public var onPixel:Bool = false;
+  public var dataArray:Array<Array<FlxColor>>;
 
-  var copyButton:FlxSprite;
-  var pasteButton:FlxSprite;
+  public var hexTypeLine:FlxSprite;
+  public var hexTypeNum:Int = -1;
+  public var hexTypeVisibleTimer:Float = 0;
 
-  var colorGradient:FlxSprite;
-  var colorGradientSelector:FlxSprite;
-  var colorPalette:FlxSprite;
-  var colorWheel:FlxSprite;
-  var colorWheelSelector:FlxSprite;
+  public var copyButton:FlxSprite;
+  public var pasteButton:FlxSprite;
 
-  var alphabetR:Alphabet;
-  var alphabetG:Alphabet;
-  var alphabetB:Alphabet;
-  var alphabetHex:Alphabet;
+  public var colorGradient:FlxSprite;
+  public var colorGradientSelector:FlxSprite;
+  public var colorPalette:FlxSprite;
+  public var colorWheel:FlxSprite;
+  public var colorWheelSelector:FlxSprite;
 
-  var modeBG:FlxSprite;
-  var notesBG:FlxSprite;
+  public var alphabetR:Alphabet;
+  public var alphabetG:Alphabet;
+  public var alphabetB:Alphabet;
+  public var alphabetHex:Alphabet;
+
+  public var modeBG:FlxSprite;
+  public var notesBG:FlxSprite;
 
   // controller support
-  var controllerPointer:FlxSprite;
-  var _lastControllerMode:Bool = false;
-  var tipTxt:FlxText;
+  public var controllerPointer:FlxSprite;
+  public var _lastControllerMode:Bool = false;
+  public var tipTxt:FlxText;
 
-  public function new()
+  public var disabled(default, set):Bool = false;
+
+  public var controls(get, never):Controls;
+
+  private function get_controls()
   {
-    super();
+    return Controls.instance;
+  }
 
-    #if DISCORD_ALLOWED
-    DiscordClient.changePresence("Note Colors Menu", null);
-    #end
+  function set_disabled(value:Bool):Bool
+  {
+    disabled = value;
+    PsychUIUtil.disableMembers(members, disabled);
+    return disabled;
+  }
+
+  public function addObject(obj:FlxBasic)
+  {
+    final object:FlxSprite = cast obj;
+    add(object);
+  }
+
+  public function new(x:Float, y:Float)
+  {
+    super(x, y);
 
     var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('stageBackForStates'));
     bg.color = 0xFFEA71FD;
     bg.screenCenter();
     bg.setGraphicSize(FlxG.width + 200, FlxG.height + 200);
     bg.antialiasing = ClientPrefs.data.antialiasing;
-    add(bg);
+    // add(bg);
 
     var grid:FlxBackdrop = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true, 0x33FFFFFF, 0x0));
     grid.velocity.set(40, 40);
@@ -77,10 +107,10 @@ class NotesColorSubState extends MusicBeatSubState
     notesBG.alpha = 0.4;
     add(notesBG);
 
-    modeNotes = new FlxTypedGroup<FlxSprite>();
+    modeNotes = new FlxSpriteGroup();
     add(modeNotes);
 
-    myNotes = new FlxTypedGroup<StrumArrow>();
+    myNotes = new FlxTypedSpriteGroup<StrumArrow>();
     add(myNotes);
 
     var bg:FlxSprite = new FlxSprite(720).makeGraphic(FlxG.width - 720, FlxG.height, FlxColor.BLACK);
@@ -167,8 +197,6 @@ class NotesColorSubState extends MusicBeatSubState
     FlxG.mouse.visible = !controls.controllerMode;
     controllerPointer.visible = controls.controllerMode;
     _lastControllerMode = controls.controllerMode;
-
-    cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
   }
 
   function updateTip()
@@ -211,14 +239,7 @@ class NotesColorSubState extends MusicBeatSubState
 
   override function update(elapsed:Float)
   {
-    if (controls.BACK)
-    {
-      FlxG.mouse.visible = false;
-      FlxG.sound.play(Paths.sound('cancelMenu'));
-      close();
-      return;
-    }
-
+    if (disabled) return;
     super.update(elapsed);
 
     // Early controller checking
@@ -365,6 +386,7 @@ class NotesColorSubState extends MusicBeatSubState
         Debug.logTrace('copied: ' + Clipboard.text);
       }
       hexTypeNum = -1;
+      PsychUIEventHandler.event(COPY_EVENT, this);
     }
     else if (pointerOverlaps(pasteButton))
     {
@@ -382,6 +404,7 @@ class NotesColorSubState extends MusicBeatSubState
         }
         else // errored
           FlxG.sound.play(Paths.sound('cancelMenu'), 0.6);
+        PsychUIEventHandler.event(PASTE_EVENT, this);
       }
       hexTypeNum = -1;
     }
@@ -400,6 +423,7 @@ class NotesColorSubState extends MusicBeatSubState
             onModeColumn = true;
             updateNotes();
             FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+            PsychUIEventHandler.event(MODE_EVENT, this);
           }
         });
       }
@@ -415,6 +439,7 @@ class NotesColorSubState extends MusicBeatSubState
             bigNote.shader = Note.globalRgbShaders[note.ID].shader;
             updateNotes();
             FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+            PsychUIEventHandler.event(NOTE_EVENT, this);
           }
         });
       }
@@ -422,11 +447,13 @@ class NotesColorSubState extends MusicBeatSubState
       {
         _storedColor = getShaderColor();
         holdingOnObj = colorWheel;
+        PsychUIEventHandler.event(COLORWHEEL_EVENT, this);
       }
       else if (pointerOverlaps(colorGradient))
       {
         _storedColor = getShaderColor();
         holdingOnObj = colorGradient;
+        PsychUIEventHandler.event(COLORGRADIENT_EVENT, this);
       }
       else if (pointerOverlaps(colorPalette))
       {
@@ -434,6 +461,7 @@ class NotesColorSubState extends MusicBeatSubState
           Std.int((pointerY() - colorPalette.y) / colorPalette.scale.y)));
         FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
         updateColors();
+        PsychUIEventHandler.event(COLORPALETTE_EVENT, this);
       }
       else if (pointerOverlaps(skinNote))
       {
@@ -441,6 +469,7 @@ class NotesColorSubState extends MusicBeatSubState
         spawnNotes();
         updateNotes(true);
         FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+        PsychUIEventHandler.event(NOTESKIN_EVENT, this);
       }
       else if (pointerY() >= hexTypeLine.y && pointerY() < hexTypeLine.y + hexTypeLine.height && Math.abs(pointerX() - 1000) <= 84)
       {
@@ -467,6 +496,7 @@ class NotesColorSubState extends MusicBeatSubState
         _storedColor = getShaderColor();
         updateColors();
         FlxG.sound.play(Paths.sound('scrollMenu'), 0.6);
+        PsychUIEventHandler.event(SHADER_EVENT, this);
       }
       else if (generalMoved || generalPressed)
       {
@@ -479,6 +509,7 @@ class NotesColorSubState extends MusicBeatSubState
           else
             setShaderColor(FlxColor.fromHSB(_storedColor.hue, _storedColor.saturation, newBrightness));
           updateColors(_storedColor);
+          PsychUIEventHandler.event(COLORGRADIENT_EVENT, this);
         }
         else if (holdingOnObj == colorWheel)
         {
@@ -490,6 +521,7 @@ class NotesColorSubState extends MusicBeatSubState
           else
             setShaderColor(FlxColor.fromRGBFloat(_storedColor.brightness, _storedColor.brightness, _storedColor.brightness));
           updateColors();
+          PsychUIEventHandler.event(COLORWHEEL_EVENT, this);
         }
       }
     }
@@ -516,6 +548,7 @@ class NotesColorSubState extends MusicBeatSubState
       setShaderColor(!onPixel ? ClientPrefs.defaultData.arrowRGB[curSelectedNote][curSelectedMode] : ClientPrefs.defaultData.arrowRGBPixel[curSelectedNote][curSelectedMode]);
       FlxG.sound.play(Paths.sound('cancelMenu'), 0.6);
       updateColors();
+      PsychUIEventHandler.event(RESET_EVENT, this);
     }
   }
 
@@ -585,10 +618,12 @@ class NotesColorSubState extends MusicBeatSubState
     FlxG.sound.play(Paths.sound('scrollMenu'));
   }
 
+  var text:Alphabet = null;
+
   // alphabets
   function makeColorAlphabet(x:Float = 0, y:Float = 0):Alphabet
   {
-    var text:Alphabet = new Alphabet(x, y, '', true);
+    text = new Alphabet(x, y, '', true);
     text.alignment = CENTERED;
     text.setScale(0.6);
     add(text);
@@ -597,8 +632,8 @@ class NotesColorSubState extends MusicBeatSubState
 
   // notes sprites functions
   var skinNote:FlxSprite;
-  var modeNotes:FlxTypedGroup<FlxSprite>;
-  var myNotes:FlxTypedGroup<StrumArrow>;
+  var modeNotes:FlxSpriteGroup;
+  var myNotes:FlxTypedSpriteGroup<StrumArrow>;
   var bigNote:Note;
 
   public function spawnNotes()
@@ -699,6 +734,13 @@ class NotesColorSubState extends MusicBeatSubState
     PlayState.stageUI = "normal";
   }
 
+  public function insertMembersObject(pos:Int, posObj:FlxBasic, obj:FlxBasic)
+  {
+    final posObject:FlxSprite = cast posObj;
+    final object:FlxSprite = cast obj;
+    insert(members.indexOf(posObject) + pos, object);
+  }
+
   function updateNotes(?instant:Bool = false)
   {
     for (note in modeNotes)
@@ -778,4 +820,17 @@ class NotesColorSubState extends MusicBeatSubState
 
   function getShader()
     return Note.globalRgbShaders[curSelectedNote];
+
+  public function resize(width:Float, height:Float)
+  {
+    for (note in myNotes)
+    {
+      note.setGraphicSize(note.scale.x + width, note.scale.y + height);
+    }
+
+    for (note in modeNotes)
+    {
+      modeNotes.setGraphicSize(note.scale.x + width, note.scale.y + height);
+    }
+  }
 }

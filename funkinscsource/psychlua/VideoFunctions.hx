@@ -17,56 +17,36 @@ class VideoFunctions
       MusicBeatState.getVariables("Video").set(tag, leVideo);
     });
     funk.set("setVideoSize", function(tag:String, x:Int, y:Int = 0, updateHitbox:Bool = true) {
-      final split:Array<String> = tag.split('.');
-      final poop:VideoSprite = split.length > 1 ? LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split),
-        split[split.length - 1]) : LuaUtils.getObjectDirectly(split[0]);
-
-      if (poop != null)
+      final video:VideoSprite = LuaUtils.getObjectLoop(tag);
+      if (video != null)
       {
-        if (!poop.isPlaying)
+        if (!video.isPlaying)
         {
-          poop.videoSprite.bitmap.onFormatSetup.add(function() {
-            poop.videoSprite.setGraphicSize(x, y);
-            if (updateHitbox) poop.videoSprite.updateHitbox();
+          video.videoSprite.bitmap.onFormatSetup.add(function() {
+            video.videoSprite.setGraphicSize(x, y);
+            if (updateHitbox) video.videoSprite.updateHitbox();
           });
         }
-        poop.setGraphicSize(x, y);
-        if (updateHitbox) poop.updateHitbox();
+        video.setGraphicSize(x, y);
+        if (updateHitbox) video.updateHitbox();
         return;
       }
       FunkinLua.luaTrace('setVideoSize: Couldnt find video: ' + tag, false, false, FlxColor.RED);
     });
     // TODO: find a way to do this?
     /*funk.set("scaleVideo", function(tag:String, x:Float, y:Float, updateHitbox:Bool = true) {
-      var obj:VideoSprite = MusicBeatState.variableMap(tag).get(tag);
-      if (obj != null)
+      final video:VideoSprite = LuaUtils.getObjectLoop(tag);
+      if (video != null)
       {
-        if (!obj.isPlaying) {
-          obj.videoSprite.bitmap.onFormatSetup.add(function(){
-            obj.videoSprite.scale.set(x, y);
-            if (updateHitbox) obj.videoSprite.updateHitbox();
-          });
-        }
-        obj.videoSprite.scale.set(x, y);
-        if (updateHitbox) obj.videoSprite.updateHitbox();
-        return;
-      }
-
-      var split:Array<String> = tag.split('.');
-      var poop:VideoSprite = LuaUtils.getObjectDirectly(split[0]);
-      if (split.length > 1) poop = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
-
-       if (poop != null)
-      {
-        if (!poop.isPlaying)
+        if (!video.isPlaying)
         {
-          poop.videoSprite.bitmap.onFormatSetup.add(function() {
-            poop.videoSprite.scale.set(x, y);
-            if (updateHitbox) poop.videoSprite.updateHitbox();
+          video.videoSprite.bitmap.onFormatSetup.add(function() {
+            video.videoSprite.scale.set(x, y);
+            if (updateHitbox) video.videoSprite.updateHitbox();
           });
         }
-        poop.scale.set(x, y);
-        if (updateHitbox) poop.updateHitbox();
+        video.scale.set(x, y);
+        if (updateHitbox) video.updateHitbox();
         return;
       }
       FunkinLua.luaTrace('scaleVideo: Couldnt find video: ' + obj, false, false, FlxColor.RED);
@@ -106,53 +86,35 @@ class VideoFunctions
     });
 
     funk.set("playVideo", function(tag:String) {
-      final split:Array<String> = tag.split('.');
-      var poop:VideoSprite = LuaUtils.getObjectDirectly(split[0]);
-      if (split.length > 1)
+      final video:VideoSprite = LuaUtils.getObjectLoop(tag);
+      if (video != null)
       {
-        poop = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
-      }
-
-      if (poop != null)
-      {
-        if (!poop.isPlaying) poop.play();
+        if (!video.isPlaying) video.play();
         return;
       }
       FunkinLua.luaTrace('playVideo: Couldnt find video: ' + tag, false, false, FlxColor.RED);
     });
     funk.set("resumeVideo", function(tag:String) {
-      final split:Array<String> = tag.split('.');
-      var poop:VideoSprite = LuaUtils.getObjectDirectly(split[0]);
-      if (split.length > 1)
+      final video:VideoSprite = LuaUtils.getObjectLoop(tag);
+      if (video != null)
       {
-        poop = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
-      }
-
-      if (poop != null)
-      {
-        if (!poop.isPlaying && poop.isPaused) poop.resume();
+        if (!video.isPlaying && video.isPaused) video.resume();
         return;
       }
       FunkinLua.luaTrace('resumeVideo: Couldnt find video: ' + tag, false, false, FlxColor.RED);
     });
     funk.set("pauseVideo", function(tag:String) {
-      final split:Array<String> = tag.split('.');
-      var poop:VideoSprite = LuaUtils.getObjectDirectly(split[0]);
-      if (split.length > 1)
+      final video:VideoSprite = LuaUtils.getObjectLoop(tag);
+      if (video != null)
       {
-        poop = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
-      }
-
-      if (poop != null)
-      {
-        if (poop.isPlaying && !poop.isPaused) poop.pause();
+        if (video.isPlaying && !video.isPaused) video.pause();
         return;
       }
       FunkinLua.luaTrace('pauseVideo: Couldnt find video: ' + tag, false, false, FlxColor.RED);
     });
 
     funk.set("luaVideoExists", function(tag:String) {
-      var obj:VideoSprite = MusicBeatState.variableMap(tag).get(tag);
+      final obj:VideoSprite = MusicBeatState.variableMap(tag).get(tag);
       return (obj != null && Std.isOfType(obj, VideoSprite));
     });
   }

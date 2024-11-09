@@ -22,7 +22,7 @@
       "fps": 24,
       "anim": "singLEFT",
       "indices": [],
-      "name": "Monster left note"
+      "name": "Monster Right note"
     },
     {
       "offsets": [-51, 0],
@@ -30,7 +30,7 @@
       "fps": 24,
       "anim": "singRIGHT",
       "indices": [],
-      "name": "Monster Right note"
+      "name": "Monster left note"
     },
     {
       "offsets": [-40, -94],
@@ -62,7 +62,7 @@
       "fps": 24,
       "anim": "singRIGHT-loop",
       "loop": true,
-      "name": "Monster Right note"
+      "name": "Monster left note"
     },
     {
       "offsets": [-30, 0],
@@ -70,7 +70,7 @@
       "fps": 24,
       "anim": "singLEFT-loop",
       "loop": true,
-      "name": "Monster left note"
+      "name": "Monster Right note"
     },
     {
       "offsets": [1, 0],

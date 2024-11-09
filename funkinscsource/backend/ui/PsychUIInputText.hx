@@ -48,6 +48,14 @@ class PsychUIInputText extends FlxSpriteGroup
   public var textObj:FlxText;
   public var caret:FlxSprite;
   public var onChange:String->String->Void;
+  public var disabled(default, set):Bool = false;
+
+  function set_disabled(value:Bool):Bool
+  {
+    disabled = value;
+    PsychUIUtil.disableMembers(members, disabled);
+    return disabled;
+  }
 
   public var fieldWidth(default, set):Int = 0;
   public var maxLength(default, set):Int = 0;
@@ -100,6 +108,7 @@ class PsychUIInputText extends FlxSpriteGroup
   function onKeyDown(e:KeyboardEvent)
   {
     if (focusOn != this) return;
+    if (disabled) return;
 
     var keyCode:Int = e.keyCode;
     var charCode:Int = e.charCode;
@@ -392,6 +401,8 @@ class PsychUIInputText extends FlxSpriteGroup
   override function update(elapsed:Float)
   {
     super.update(elapsed);
+
+    if (disabled) return;
 
     if (FlxG.mouse.justPressed)
     {

@@ -723,21 +723,14 @@ class SupportBETAFunctions
 
     // masking!
     funk.set("addClipRect", function(obj:String, x:Float, y:Float, width:Float, height:Float) {
-      var split:Array<String> = obj.split('.');
-      var object:Dynamic = LuaUtils.getObjectDirectly(split[0]);
-      if (split.length > 1)
-      {
-        object = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
-      }
-
+      final object:Dynamic = LuaUtils.getObjectLoop(obj);
       if (object != null)
       {
-        var swagRect = (object.clipRect != null ? object.clipRect : new FlxRect());
+        final swagRect = (object.clipRect != null ? object.clipRect : new FlxRect());
         swagRect.x = x;
         swagRect.y = y;
         swagRect.width = width;
         swagRect.height = height;
-
         object.clipRect = swagRect;
         return true;
       }
@@ -746,19 +739,11 @@ class SupportBETAFunctions
     });
 
     funk.set("setClipRectAngle", function(obj:String, degrees:Float) {
-      var daRect:FlxRect = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop([obj, 'clipRect']), 'clipRect');
-
+      final daRect:FlxRect = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop([obj, 'clipRect']), 'clipRect');
       if (daRect != null)
       {
         daRect.getRotatedBounds(degrees);
-
-        var split:Array<String> = obj.split('.');
-        var object:FlxSprite = LuaUtils.getObjectDirectly(split[0]);
-        if (split.length > 1)
-        {
-          object = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
-        }
-
+        final object:FlxSprite = LuaUtils.getObjectLoop(obj);
         object.clipRect = daRect;
         return true;
       }
@@ -867,7 +852,7 @@ class SupportBETAFunctions
     });
 
     funk.set("getMapLength", function(obj:String) {
-      var split:Array<String> = obj.split('.');
+      final split:Array<String> = obj.split('.');
       var shit:Map<String, Dynamic> = Reflect.getProperty(LuaUtils.getTargetInstance(), obj);
 
       if (split.length > 1)
@@ -877,11 +862,9 @@ class SupportBETAFunctions
         if (shit == null) shit = LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]);
       }
 
-      var daArray:Array<String> = [];
-
+      final daArray:Array<String> = [];
       for (key in shit.keys())
         daArray.push(key);
-
       return daArray.length;
     });
 
@@ -1011,13 +994,7 @@ class SupportBETAFunctions
     });
 
     funk.set("changeIcon", function(obj:String, iconName:String) {
-      final split:Array<String> = obj.split('.');
-      var object:HealthIcon = cast(LuaUtils.getObjectDirectly(split[0]), HealthIcon);
-      if (split.length > 1)
-      {
-        object = cast(LuaUtils.getVarInArray(LuaUtils.getPropertyLoop(split), split[split.length - 1]), HealthIcon);
-      }
-
+      final object:HealthIcon = LuaUtils.getObjectLoop(obj);
       if (object != null)
       {
         object.changeIcon(iconName);

@@ -32,7 +32,32 @@ class Main extends Sprite
   public static var focused:Bool = true;
   public static var fpsVar:FPSCounter;
 
-  public static var appName:String = ''; // Application name.
+  @:isVar public static var appName(get, set):String = ''; // Application name.
+
+  static function get_appName():String
+  {
+    if (appName == null || appName.length < 1)
+    {
+      // Get first window in case the coder creates more windows.
+      @:privateAccess
+      appName = openfl.Lib.application.windows[0].__backend.parent.__attributes.title;
+      return appName;
+    }
+    return appName;
+  }
+
+  static function set_appName(value:String):String
+  {
+    if (value == null || value.length < 1)
+    {
+      // Get first window in case the coder creates more windows.
+      @:privateAccess
+      appName = openfl.Lib.application.windows[0].__backend.parent.__attributes.title;
+      return value = appName;
+    }
+    appName = value;
+    return appName;
+  }
 
   public static var gameContainer:Main = null; // Main instance to access when needed.
 
@@ -61,7 +86,7 @@ class Main extends Sprite
 
   private function setupGame():Void
   {
-    var game:FlxGame = new FlxGame(1280, 720, Init, 60, 60, true, false);
+    final game:FlxGame = new FlxGame(1280, 720, Init, 60, 60, true, false);
     @:privateAccess
     game._customSoundTray = backend.soundtray.FunkinSoundTray;
     addChild(game);
@@ -124,9 +149,6 @@ class Main extends Sprite
     });
 
     #if desktop
-    // Get first window in case the coder creates more windows.
-    @:privateAccess
-    appName = openfl.Lib.application.windows[0].__backend.parent.__attributes.title;
     Application.current.window.onFocusIn.add(onWindowFocusIn);
     Application.current.window.onFocusOut.add(onWindowFocusOut);
     #end
@@ -166,32 +188,14 @@ class Main extends Sprite
   }
 
   public static function checkGJKeysAndId():Bool
-  {
-    var result:Bool = (GJKeys.key != '' && GJKeys.id != 0);
-    return result;
-  }
+    return (GJKeys.key != '' && GJKeys.id != 0);
 
   function onWindowFocusOut()
   {
     focused = false;
 
     oldVol = FlxG.sound.volume;
-    if (oldVol > 0.3)
-    {
-      newVol = 0.3;
-    }
-    else
-    {
-      if (oldVol > 0.1)
-      {
-        newVol = 0.1;
-      }
-      else
-      {
-        newVol = 0;
-      }
-    }
-
+    newVol = oldVol > 0.3 ? 0.3 : oldVol > 0.1 ? 0.1 : 0;
     if (focusMusicTween != null) focusMusicTween.cancel();
     focusMusicTween = FlxTween.tween(FlxG.sound, {volume: newVol}, 0.5);
   }

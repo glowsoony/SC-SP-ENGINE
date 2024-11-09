@@ -78,6 +78,12 @@ class MathUtil
     return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2);
   }
 
+  public static function round(num:Float, numDecimalPlaces:Int)
+  {
+    final mult:Float = Math.pow(10, numDecimalPlaces);
+    return Math.floor(num * mult + 0.5) / mult;
+  }
+
   /**
    * Get the base-2 logarithm of a value.
    * @param x value

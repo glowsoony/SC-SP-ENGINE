@@ -15,7 +15,7 @@ class ModchartSprite extends FlxSprite
     animation.play(name, forced, reverse, startFrame);
 
     var daOffset = animOffsets.get(name);
-    if (hasOffsetAnimation(name)) offset.set(daOffset[0], daOffset[1]);
+    if (hasOffsetAnimation(name)) offset.set(daOffset[0] * scale.x, daOffset[1] * scale.y);
   }
 
   public function hasOffsetAnimation(anim:String):Bool

@@ -17,6 +17,14 @@ class PsychUISlider extends FlxSpriteGroup
   public var min(default, set):Float = -999;
   public var max(default, set):Float = 999;
   public var decimals(default, set):Int = 2;
+  public var disabled(default, set):Bool = false;
+
+  function set_disabled(value:Bool):Bool
+  {
+    disabled = value;
+    PsychUIUtil.disableMembers(members, disabled);
+    return disabled;
+  }
 
   public function new(x:Float = 0, y:Float = 0, callback:Float->Void, def:Float = 0, min:Float = -999, max:Float = 999, wid:Float = 200,
       mainColor:FlxColor = FlxColor.WHITE, handleColor:FlxColor = 0xFFAAAAAA)
@@ -66,6 +74,8 @@ class PsychUISlider extends FlxSpriteGroup
   override function update(elapsed:Float)
   {
     super.update(elapsed);
+
+    if (disabled) return;
 
     if (FlxG.mouse.justMoved || FlxG.mouse.justPressed || forceNextUpdate)
     {

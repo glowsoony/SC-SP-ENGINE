@@ -191,7 +191,9 @@ class VSlice
       time += sectionTime;
 
       var sec:SwagSection = emptySection();
-      sec.mustHitSection = sectionMustHits[baseSections.length >= sectionMustHits.length ? sectionMustHits.length - 1 : baseSections.length];
+      sec.mustHitSection = sectionMustHits[
+        baseSections.length >= sectionMustHits.length ? sectionMustHits.length - 1 : baseSections.length
+      ];
       if (lastBpm != bpm)
       {
         sec.changeBPM = true;
@@ -397,15 +399,7 @@ class VSlice
                   value3: lilEvent[3],
                   value4: lilEvent[4],
                   value5: lilEvent[5],
-                  value6: lilEvent[6],
-                  value7: lilEvent[7],
-                  value8: lilEvent[8],
-                  value9: lilEvent[9],
-                  value10: lilEvent[10],
-                  value11: lilEvent[11],
-                  value12: lilEvent[12],
-                  value13: lilEvent[13],
-                  value14: lilEvent[14]
+                  value6: lilEvent[6]
                 }
             });
       }

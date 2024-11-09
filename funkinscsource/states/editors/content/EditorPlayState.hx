@@ -275,11 +275,37 @@ class EditorPlayState extends MusicBeatSubState
 
   public function createNotes():Array<Note>
   {
+    var daBpm:Float = (PlayState.SONG.notes[0].changeBPM == true) ? PlayState.SONG.notes[0].bpm : PlayState.SONG.bpm;
     var oldNote:Note = null;
     var unspawnNotes:Array<Note> = [];
+
+    // Section Time/Crochet
+    var noteSec:Int = 0;
+    var secTime:Float = 0;
+    var cachedSectionTimes:Array<Float> = [];
+    var cachedSectionCrochets:Array<Float> = [];
+    if (PlayState.SONG != null)
+    {
+      var tempBpm:Float = daBpm;
+      for (secNum => section in PlayState.SONG.notes)
+      {
+        if (PlayState.SONG.notes[noteSec].changeBPM == true) tempBpm = PlayState.SONG.notes[noteSec].bpm;
+
+        secTime += Conductor.calculateCrochet(tempBpm) * (Math.round(4 * section.sectionBeats) / 4);
+        cachedSectionTimes.push(secTime);
+      }
+    }
+
+    // Load Notes
     for (note in _noteList)
     {
       if (note == null || note.strumTime < startPos) continue;
+
+      while (cachedSectionTimes.length > noteSec + 1 && cachedSectionTimes[noteSec + 1] <= note.strumTime)
+      {
+        noteSec++;
+        if (PlayState.SONG.notes[noteSec].changeBPM == true) daBpm = PlayState.SONG.notes[noteSec].bpm;
+      }
 
       var idx:Int = _noteList.indexOf(note);
       if (idx != 0)
@@ -317,16 +343,17 @@ class EditorPlayState extends MusicBeatSubState
       swagNote.scrollFactor.set();
       unspawnNotes.push(swagNote);
 
+      var curStepCrochet:Float = 60 / daBpm * 1000 / 4.0;
       final roundSus:Int = Math.floor(swagNote.sustainLength / Conductor.stepCrochet);
       if (roundSus > 0)
       {
-        for (susNote in 0...roundSus + 1)
+        for (susNote in 0...roundSus)
         {
           oldNote = unspawnNotes[Std.int(unspawnNotes.length - 1)];
 
           final sustainNote:Note = new Note(
             {
-              strumTime: note.strumTime + (Conductor.stepCrochet * susNote),
+              strumTime: note.strumTime + (curStepCrochet * susNote),
               noteData: note.noteData,
               isSustainNote: true,
               noteSkin: PlayState.SONG.options.arrowSkin,
@@ -349,14 +376,14 @@ class EditorPlayState extends MusicBeatSubState
             {
               oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight;
               oldNote.scale.y /= playbackRate;
-              oldNote.updateHitbox();
+              oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
             }
             if (ClientPrefs.data.downScroll) sustainNote.correctionOffset = 0;
           }
           else if (oldNote.isSustainNote)
           {
             oldNote.scale.y /= playbackRate;
-            oldNote.updateHitbox();
+            oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
           }
           if (sustainNote.mustPress) sustainNote.x += FlxG.width / 2; // general offset
           else if (ClientPrefs.data.middleScroll)
@@ -691,11 +718,8 @@ class EditorPlayState extends MusicBeatSubState
     for (key in keysArray)
     {
       holdArray.push(controls.pressed(key));
-      if (controls.controllerMode)
-      {
-        pressArray.push(controls.justPressed(key));
-        releaseArray.push(controls.justReleased(key));
-      }
+      pressArray.push(controls.justPressed(key));
+      releaseArray.push(controls.justReleased(key));
     }
     // TO DO: Find a better way to handle controller inputs, this should work for now
     if (controls.controllerMode && pressArray.contains(true)) for (i in 0...pressArray.length)

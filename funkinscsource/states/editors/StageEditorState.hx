@@ -1675,6 +1675,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
       }
       _makeNewSprite = null;
     }
+    _file = null;
 
     if (fullPath != null)
     {
@@ -1692,6 +1693,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
       }
 
       createPopup.visible = createPopup.active = false;
+      #if MODS_ALLOWED
       var modFolder:String = (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0) ? Paths.mods('${Mods.currentModDirectory}/images/') : Paths.mods('images/');
       openSubState(new BasePrompt(480, 160, 'This file is not inside Psych Engine.', function(state:BasePrompt) {
         var txt:FlxText = new FlxText(0, state.bg.y + 60, 460, 'Copy to: "$modFolder"?', 11);
@@ -1736,10 +1738,13 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
         btn.cameras = state.cameras;
         state.add(btn);
       }));
+      #else
+      showOutput('ERROR! File cannot be used, move it to "assets" and recompile.', true);
+      #end
     }
     _file = null;
     #else
-    Debug.logError('File couldn' t be loaded!You aren 't on Desktop, are you?');
+    Debug.logError('File couldn\'t be loaded! You aren\'t on Desktop, are you?');
     #end
   }
 

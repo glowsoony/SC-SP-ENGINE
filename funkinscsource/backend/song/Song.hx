@@ -30,6 +30,12 @@ class Song
 
   public static function convert(songJson:Dynamic) // Convert old charts to psych_v1 format
   {
+    function checkToString(e:Dynamic)
+    {
+      if (e == null) return "";
+      final a:String = !Std.isOfType(e, String) ? Std.string(e) : e;
+      return a;
+    }
     if (songJson.events == null)
     {
       songJson.events = [];
@@ -51,7 +57,13 @@ class Song
                 [
                   note[2],
                   [
-                    note[3], note[4], note[5], note[6], note[7], note[8], note[9], note[10], note[11], note[12], note[13], note[14], note[15], note[16]]
+                    checkToString(note[3]),
+                    checkToString(note[4]),
+                    checkToString(note[5]),
+                    checkToString(note[6]),
+                    checkToString(note[7]),
+                    checkToString(note[8])
+                  ]
                 ]
               ]
             ]);
@@ -225,6 +237,12 @@ class Song
    */
   public static function processSongDataToSCEData(songJson:Dynamic)
   {
+    function checkToString(e:Dynamic)
+    {
+      if (e == null) return "";
+      final a:String = !Std.isOfType(e, String) ? Std.string(e) : e;
+      return a;
+    }
     try
     {
       /*
@@ -249,14 +267,6 @@ class Song
                 value4
                 value5
                 value6
-                value7
-                value8
-                value9
-                value10
-                value11
-                value12
-                value13
-                value14
               ]
             ]
           ]
@@ -269,6 +279,13 @@ class Song
         // New Format
         var newEvents:Array<Dynamic> = [];
 
+        function checkToString(e:Dynamic)
+        {
+          if (e == null) return "";
+          final a:String = !Std.isOfType(e, String) ? Std.string(e) : e;
+          return a;
+        }
+
         // Formatting Events
         for (event in oldEvents)
         {
@@ -279,9 +296,9 @@ class Song
             if (Std.isOfType(event[1][i][1], Array)) params = event[1][i][1];
             else if (Std.isOfType(event[1][i][1], String))
             {
-              for (j in 1...14)
+              for (j in 1...6)
               {
-                params.push(event[1][i][j]);
+                params.push(checkToString(event[1][i][j]));
               }
             }
 
