@@ -23,7 +23,7 @@ import objects.Character;
 import objects.HealthIcon;
 import objects.note.Note;
 import objects.note.StrumArrow;
-import objects.note.Strumline;
+import objects.note.StrumLine;
 import states.editors.content.MetaNote;
 import states.editors.content.VSlice;
 import states.editors.content.Prompt;
@@ -234,7 +234,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
   public var movingNotes:FlxTypedGroup<MetaNote> = new FlxTypedGroup<MetaNote>();
   public var eventLockOverlay:FlxSprite;
   public var vortexIndicator:FlxSprite;
-  public var strumLineNotes:Strumline = new Strumline(8);
+  public var strumLineNotes:StrumLine = new StrumLine();
   public var dummyArrow:FlxSprite;
   public var isMovingNotes:Bool = false;
   public var movingNotesLastData:Int = 0;

@@ -26,7 +26,7 @@ class SustainTrail extends FlxSprite
   public var noteDirection:Int = 0;
   public var sustainLength(default, set):Float = 0; // millis
   public var fullSustainLength:Float = 0;
-  public var parentStrumline:Strumline;
+  public var parentStrumline:StrumLine;
 
   public var cover:HoldCoverSprite = null;
 

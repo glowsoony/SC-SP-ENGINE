@@ -341,7 +341,7 @@ class Constant3DNote extends ModchartArrow implements ICloneable<Constant3DNote>
     return value;
   }
 
-  public var parentStrumline:Strumline;
+  public var parentStrumline:StrumLine;
 
   // Used in-game to control the scroll speed within a song
   public var noteScrollSpeed(default, set):Float = 1.0;
@@ -357,7 +357,7 @@ class Constant3DNote extends ModchartArrow implements ICloneable<Constant3DNote>
   public var inEditor:Bool = false;
 
   public function new(strumTime:Float, noteData:Int, sustainNote:Bool = false, noteSkin:String, ?prevNote:Constant3DNote, ?createdFrom:Dynamic = null,
-      ?scrollSpeed:Float, ?parentStrumline:Strumline, ?inEditor:Bool = false)
+      ?scrollSpeed:Float, ?parentStrumline:StrumLine, ?inEditor:Bool = false)
   {
     super();
 
@@ -951,7 +951,9 @@ class Constant3DNote extends ModchartArrow implements ICloneable<Constant3DNote>
         .get(animation.curAnim.name)
         .get(animation.curAnim.curFrame)
         .indexOf(alpha);
-      gpix = glist[indexes.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame)[dex]];
+      gpix = glist[
+        indexes.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame)[dex]
+      ];
       oalp = alpha;
       oanim = animation.curAnim.name;
     }

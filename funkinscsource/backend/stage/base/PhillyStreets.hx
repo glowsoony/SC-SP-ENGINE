@@ -170,7 +170,7 @@ class PhillyStreets extends BaseStage
     if (_song.gameOverChar == null || _song.gameOverChar.trim().length < 1) GameOverSubstate.characterName = 'pico-dead';
 
     abot.setPosition(gf.x, gf.y + 350);
-    var unspawnNotes:CustomArrayGroup<Note> = cast game.unspawnNotes;
+    var unspawnNotes:CustomArrayGroup<Note> = cast game.strumLineNotes.unspawnNotes;
     for (note in unspawnNotes.members)
     {
       if (note == null) continue;

@@ -2234,7 +2234,7 @@ class PublicFunkinLua {}
 //   {
 //     if (place == null) return null;
 //     if (!GlobalUtils.isReflect(true, place, 'strumLineNotes')) return;
-//     final strumLineNotes:Strumline = cast GlobalUtils.reflectGet(place, 'strumLineNotes');
+//     final strumLineNotes:StrumLine = cast GlobalUtils.reflectGet(place, 'strumLineNotes');
 //     final strumNote:StrumArrow = strumLineNotes.members[note % strumLineNotes.length];
 //     if (strumNote == null) return null;
 //     if (tag != null)

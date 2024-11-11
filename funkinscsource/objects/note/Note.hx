@@ -36,7 +36,7 @@ typedef NoteSpriteStartData =
   ?prevNote:Note,
   ?createdFrom:Dynamic,
   ?scrollSpeed:Float,
-  ?parentStrumline:Strumline,
+  ?parentStrumline:StrumLine,
   ?inEditor:Bool
 }
 
@@ -375,7 +375,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
     return value;
   }
 
-  public var parentStrumline:Strumline;
+  public var parentStrumline:StrumLine;
 
   // Used in-game to control the scroll speed within a song
   public var noteScrollSpeed(default, set):Float = 1.0;
@@ -1155,5 +1155,13 @@ class Note extends ModchartArrow implements ICloneable<Note>
         rgbShader.g = FlxColor.WHITE;
         rgbShader.b = superCoolColor.getDarkened(0.7);
     }
+  }
+
+  public function invalidate()
+  {
+    ignoreNote = true;
+    active = false;
+    visible = false;
+    kill();
   }
 }

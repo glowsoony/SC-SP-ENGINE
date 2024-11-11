@@ -177,7 +177,7 @@ class StageData
       camera_speed: 1,
 
       ratingSkin: ['', ''],
-      countDownAssets: ['ready', 'set', 'go']
+      countDownAssets: ['ready', 'set', 'go'],
 
       introSoundsPrefix: "",
       introSoundsSuffix: "",

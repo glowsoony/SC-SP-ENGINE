@@ -435,7 +435,7 @@ class PauseSubState extends MusicBeatSubState
         {
           if (curTime != Conductor.songPosition)
           {
-            game.clearNotesBefore(curTime);
+            game.clearNotesBefore(false, curTime);
             game.setSongTime(curTime);
           }
           close();
@@ -550,13 +550,11 @@ class PauseSubState extends MusicBeatSubState
       {
         introAlts = introAssets.get(value);
 
-        if (game.stageIntroSoundsSuffix != null && game.stageIntroSoundsSuffix.length > 0)
-          game.introSoundsSuffix = game.stageIntroSoundsSuffix;
+        if (game.stageIntroSoundsSuffix != null && game.stageIntroSoundsSuffix.length > 0) game.introSoundsSuffix = game.stageIntroSoundsSuffix;
         else
           game.introSoundsSuffix = '';
 
-        if (game.stageIntroSoundsPrefix != null && game.stageIntroSoundsPrefix.length > 0)
-          game.introSoundsPrefix = game.stageIntroSoundsPrefix;
+        if (game.stageIntroSoundsPrefix != null && game.stageIntroSoundsPrefix.length > 0) game.introSoundsPrefix = game.stageIntroSoundsPrefix;
         else
           game.introSoundsPrefix = '';
       }

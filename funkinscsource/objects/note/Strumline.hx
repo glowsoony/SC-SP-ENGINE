@@ -3,7 +3,7 @@ package objects.note;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import backend.CustomArrayGroup;
 
-class Strumline extends FlxSpriteGroup
+class StrumLine extends FlxTypedGroup<StrumArrow>
 {
   // Used in-game to control the scroll speed within a song
   public var scrollSpeed(default, set):Float = 1.0;
@@ -18,7 +18,6 @@ class Strumline extends FlxSpriteGroup
 
   public var notes:FlxTypedGroup<Note> = null;
   public var unspawnNotes:CustomArrayGroup<Note> = new CustomArrayGroup<Note>();
-  public var strumLineNotes:FlxTypedGroup<StrumArrow> = new FlxTypedGroup<StrumArrow>();
   public var isPixelNotes:Bool = false;
 
   public var allowOverrideCpuControl:Bool = true;
@@ -31,138 +30,197 @@ class Strumline extends FlxSpriteGroup
     return cpuControlled;
   }
 
-  public var noteHit:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-  public var noteMissed:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-  public var noteDeleted:FlxTypedSignal<(Note, Bool) -> Void> = new FlxTypedSignal<(Note, Bool) -> Void>();
-  public var noteNotReady:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+  public var drawNotes:Bool = !((PlayState.SONG != null && PlayState.SONG.options.notITG) && ClientPrefs.getGameplaySetting('modchart'));
+  public var noteKillOffset(default, set):Float = 350;
 
-  public function new(x:Float, y:Float, noteLimit:Int = 0, strumLimit:Int = 0)
+  function set_noteKillOffset(value:Float):Float
   {
-    notes = new FlxTypedGroup<Note>(noteLimit);
-    strumLineNotes = new FlxTypedGroup<StrumArrow>(strumLimit);
-    noteDeleted.add((daNote:Note, isUnspawn:Bool) -> {
-      invalidateNote(daNote, isUnspawn);
-    });
-    noteNotReady.add((daNote:Note) -> {
-      daNote.canBeHit = false;
-      daNote.wasGoodHit = false;
-    });
-    add(strumLineNotes);
-    add(notes);
-    super(x, y);
+    noteKillOffset = value;
+    if (noteKillOffset != (noteKillOffset / scrollSpeed)) noteKillOffset /= scrollSpeed;
+    return noteKillOffset;
   }
 
-  public dynamic function setTextureMember(member:Int, texture:String):String
-    return strumLineNotes.members[member].texture = texture;
+  public var playbackSpeed:Float = 1;
+  public var calls:StrumLineCalls = new StrumLineCalls();
+
+  public function new(strumLimit:Int = 0, noteLimit:Int = 0)
+  {
+    notes = new FlxTypedGroup<Note>(noteLimit);
+    unspawnNotes.validTime = function(rate:Float = 1, ?ignoreMultSpeed:Bool = false):Bool {
+      final firstMember:Note = unspawnNotes.members[0];
+      if (firstMember != null) return (unspawnNotes.length > 0 && firstMember.validTime(rate, ignoreMultSpeed));
+      return false;
+    }
+    calls.onDeleted = function(note:Note, unspawn:Bool) {
+      invalidateNote(note, unspawn);
+      calls.noteDeleted.dispatch(note, unspawn);
+    }
+    calls.onNotReady = function(note:Note) {
+      note.visible = note.active = false;
+      calls.noteNotReady.dispatch(note);
+    }
+    super(strumLimit);
+  }
+
+  public override function draw()
+  {
+    super.draw();
+    if (drawNotes)
+    {
+      notes.cameras = cameras;
+      notes.draw();
+    }
+  }
+
+  public dynamic function setTextureStrumMember(member:Int, texture:String):String
+    return members[member].texture = texture;
 
   public dynamic function setTexture(texture:String)
   {
-    for (strum in strumLineNotes.members)
-      strum.texture = texture;
+    for (strum in members)
+      strum.reloadNote(texture);
+
+    for (note in notes)
+      note.reloadNote(texture);
   }
-
-  public var spawnNoteLua:FlxTypedSignal<(notes:FlxTypedGroup<Note>,
-      dunceNote:Note) -> Void> = new FlxTypedSignal<(notes:FlxTypedGroup<Note>, dunceNote:Note) -> Void>();
-  public var spawnNoteHx:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public var spawnNoteLuaPost:FlxTypedSignal<(notes:FlxTypedGroup<Note>,
-      dunceNote:Note) -> Void> = new FlxTypedSignal<(notes:FlxTypedGroup<Note>, dunceNote:Note) -> Void>();
-  public var spawnNoteHxPost:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
 
   public dynamic function registerUnspawnedNotes()
   {
     if (unspawnNotes.isFirstValid())
     {
-      while (unspawnNotes.validTime(playbackRate))
+      while (unspawnNotes.validTime(playbackSpeed))
       {
         final dunceNote:Note = unspawnNotes.byIndex(0);
         notes.insert(0, dunceNote);
         dunceNote.spawned = true;
 
-        spawnNoteLua.dispatch(notes, dunceNote);
-        spawnNoteHx.dispath(dunceNote);
+        calls.onSpawnNoteLua(notes, dunceNote);
+        calls.onSpawnNoteHx(dunceNote);
 
         unspawnNotes.spliceIndexOf(dunceNote, 1);
 
-        spawnNoteLuaPost.dispatch(notes, dunceNote);
-        spawnNoteHxPost.dispath(dunceNote);
+        calls.onSpawnNoteLuaPost(notes, dunceNote);
+        calls.onSpawnNoteHxPost(dunceNote);
       }
     }
-  }
-
-  public var noteIsPixel:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function updateNoteData(playbackRate:Float, noteKillOffset:Float)
-  {
-    if (notes.length > 0)
-    {
-      notes.forEachAlive(function(daNote:Note) {
-        final strum:StrumArrow = strumLineNotes.members[daNote.noteData];
-        if (daNote.allowStrumFollow) daNote.followStrumArrow(strum, daNote.noteScrollSpeed / playbackRate);
-
-        noteIsPixel.dispatch(daNote);
-        noteHit.dispatch(daNote);
-
-        if (daNote.isSustainNote && strum.sustainReduce) daNote.clipToStrumArrow(strum);
-
-        // Kill extremely late notes and cause misses
-
-        if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
-        {
-          if (ClientPrefs.data.vanillaStrumAnimations)
-          {
-            if (!daNote.mustPress)
-            {
-              if ((daNote.isSustainNote && daNote.isHoldEnd) || !daNote.isSustainNote) strum.playAnim('static', true);
-            }
-            else
-            {
-              if (daNote.isSustainNote && daNote.isHoldEnd) strum.playAnim('static', true);
-            }
-          }
-
-          noteMissed.dispatch(daNote);
-          if (daNote.allowDeleteAndMiss) noteDeleted.dispatch(daNote, false);
-        }
-      });
-    }
-    else
-      notes.forEachAlive(function(daNote:Note) noteNotReady.distpatch(daNote));
   }
 
   override public function destroy()
   {
     unspawnNotes.clear();
+    calls.clear();
     notes = null;
-    for (signal in [
-      noteHit,
-      noteMissed,
-      noteDeleted,
-      noteNotReady,
-      spawnNoteLua,
-      spawnNoteHx,
-      spawnNoteLuaPost,
-      spawnNoteHxPost,
-      noteIsPixel
-    ])
-    {
-      signal.removeAll();
-      signal.cancel();
-    }
     super.destroy();
   }
 
   public function invalidateNote(note:Note, unspawnedNotes:Bool):Void
   {
-    if (note == null) return;
-    note.ignoreNote = true;
-    note.active = false;
-    note.visible = false;
-    note.kill();
+    note.invalidate();
     if (!unspawnedNotes) notes.remove(note, true);
     else
       unspawnNotes.remove(note);
     note.destroy();
     note = null;
+  }
+}
+
+class StrumLineCalls
+{
+  public var noteIsPixel:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+
+  public dynamic function onIsPixel(note:Note) {}
+
+  public var noteHit:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+
+  public dynamic function onHit(note:Note) {}
+
+  public var noteMissed:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+
+  public dynamic function onMissed(daNote:Note) {}
+
+  public var noteNotReady:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+
+  public dynamic function onNotReady(daNote:Note) {}
+
+  public var noteDeleted:FlxTypedSignal<(Note, Bool) -> Void> = new FlxTypedSignal<(Note, Bool) -> Void>();
+
+  public dynamic function onDeleted(note:Note, unspawn:Bool) {}
+
+  public var clearNotesBefore:FlxTypedSignal<(Float, Bool) -> Void> = new FlxTypedSignal<(Float, Bool) -> Void>();
+
+  public dynamic function onClearNotesBefore(time:Float, completelyClear:Bool) {}
+
+  public var clearNotesAfter:FlxTypedSignal<Float->Void> = new FlxTypedSignal<Float->Void>();
+
+  public dynamic function onClearNotesAfter(time:Float) {}
+
+  public var spawnNoteLua:FlxTypedSignal<(notes:FlxTypedGroup<Note>,
+      dunceNote:Note) -> Void> = new FlxTypedSignal<(notes:FlxTypedGroup<Note>, dunceNote:Note) -> Void>();
+
+  public dynamic function onSpawnNoteLua(notes:FlxTypedGroup<Note>, dunceNote:Note) {}
+
+  public var spawnNoteHx:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+
+  public dynamic function onSpawnNoteHx(dunceNote:Note) {}
+
+  public var spawnNoteLuaPost:FlxTypedSignal<(notes:FlxTypedGroup<Note>,
+      dunceNote:Note) -> Void> = new FlxTypedSignal<(notes:FlxTypedGroup<Note>, dunceNote:Note) -> Void>();
+
+  public dynamic function onSpawnNoteLuaPost(notes:FlxTypedGroup<Note>, dunceNote:Note) {}
+
+  public var spawnNoteHxPost:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+
+  public dynamic function onSpawnNoteHxPost(dunceNote:Note) {}
+
+  public function new()
+  {
+    clearFunctions(); // Functions need to be activated first.
+  }
+
+  public function clearSignals()
+  {
+    noteHit.destroy();
+    noteMissed.destroy();
+    noteNotReady.destroy();
+    spawnNoteLua.destroy();
+    spawnNoteHx.destroy();
+    spawnNoteLuaPost.destroy();
+    spawnNoteHxPost.destroy();
+    noteIsPixel.destroy();
+    noteDeleted.destroy();
+    clearNotesBefore.destroy();
+    clearNotesAfter.destroy();
+  }
+
+  public function clearFunctions()
+  {
+    onIsPixel = function(note) {
+    }
+    onHit = function(note) {
+    }
+    onMissed = function(note) {
+    }
+    onNotReady = function(note) {
+    }
+    onDeleted = function(note, unspawn) {
+    }
+    onClearNotesBefore = function(time, completely) {
+    }
+    onClearNotesAfter = function(time) {
+    }
+    onSpawnNoteLua = function(notes, dunceNote) {
+    }
+    onSpawnNoteHx = function(note) {
+    }
+    onSpawnNoteLuaPost = function(notes, dunceNote) {
+    }
+    onSpawnNoteHxPost = function(note) {
+    }
+  }
+
+  public function clear()
+  {
+    clearSignals();
+    clearFunctions();
   }
 }
