@@ -84,7 +84,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<define name="TRANSLATIONS_ALLOWED" />
 
 	<!-- Defines whether if videos are allowed. -->
-	<define name="VIDEOS_ALLOWED" if="windows || linux || android" unless="32bits"/>
+	<define name="VIDEOS_ALLOWED" if="windows || linux || android || mac" unless="32bits"/>
 
 	<!-- Defines whether if the crashhandler can be used. -->
 	<define name="CRASH_HANDLER" if="desktop release" />
@@ -137,9 +137,12 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	</section>
 
 	<section if="MODS_ALLOWED">
-		<assets path='example_mods' rename='mods' embed='false' type='template'/>
+		<assets path='example_mods' rename='mods' embed='false' type='template' unless="mac"/>
+		<assets path='example_mods' rename='mods' embed='false' if="mac"/>
 	</section>
 	<assets path='art/readme.txt' rename='do NOT readme.txt' />
+
+	<assets path='list.txt' rename='modsList.txt' if="mac"/>
 
 	<!-- assets path="CHANGELOG.md" rename='changelog.txt' -->
 
@@ -248,7 +251,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<haxelib name="markdown"/>
 
 	<!-- Defines the SCE's version of modcharting Tools. -->
-	<define name="SCEModchartingTools" if="fnf-modcharting-tools"/>
+	<define name="SCEModchartingTools" if="TestingM"/>
 	<define name="HScriptImproved" if="hscript-improved"/>
 
 	<!-- Enables a terminal log prompt on debug builds -->

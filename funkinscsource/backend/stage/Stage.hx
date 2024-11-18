@@ -598,21 +598,20 @@ class Stage extends backend.stage.base.BaseStage
 
   public function initHScript(file:String)
   {
-    var newScript:HScript = null;
+    final times:Float = Date.now().getTime();
+    var newScript:HScript = new HScript(null, file, null, true);
+
     try
     {
-      var times:Float = Date.now().getTime();
-      newScript = new HScript(null, file, true, true);
-      newScript.executeFunction('onCreate');
+      newScript.parse(true);
+      newScript.run('onCreate');
       hscriptArray.push(newScript);
       Debug.logInfo('initialized Hscript interp successfully: $file (${Std.int(Date.now().getTime() - times)}ms)');
     }
-    catch (e:Dynamic)
+    catch (e:crowplexus.hscript.Expr.Error)
     {
-      var newScript:HScript = cast(Iris.instances.get(file), HScript);
-      HScript.hscriptTrace('ERROR ON LOADING ($file) - $e', FlxColor.RED);
-
-      if (newScript != null) newScript.destroy();
+      newScript.errorCaught(e);
+      newScript.destroy();
     }
   }
 
@@ -775,24 +774,13 @@ class Stage extends backend.stage.base.BaseStage
       @:privateAccess
       if (script == null || !script.exists(funcToCall) || exclusions.contains(script.origin)) continue;
 
-      try
-      {
-        var callValue = script.call(funcToCall, args);
-        var myValue:Dynamic = callValue.signature;
+      var callValue:Dynamic = script.run(funcToCall, args);
+      if (callValue == null) continue;
 
-        // compiler fuckup fix
-        if ((myValue == LuaUtils.Function_StopHScript || myValue == LuaUtils.Function_StopAll)
-          && !excludeValues.contains(myValue)
-          && !ignoreStops)
-        {
-          returnVal = myValue;
-          break;
-        }
-        if (myValue != null && !excludeValues.contains(myValue)) returnVal = myValue;
-      }
-      catch (e:Dynamic)
+      if (!excludeValues.contains(callValue))
       {
-        HScript.hscriptTrace('ERROR (${script.origin}: $funcToCall) - $e', FlxColor.RED);
+        if ((callValue == LuaUtils.Function_StopHScript || callValue == LuaUtils.Function_StopAll) && !ignoreStops) return callValue;
+        if (callValue != null && !excludeValues.contains(callValue)) returnVal = callValue;
       }
     }
     #end

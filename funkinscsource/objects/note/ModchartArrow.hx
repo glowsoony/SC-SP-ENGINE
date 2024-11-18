@@ -200,21 +200,24 @@ class ModchartArrow extends FunkinSCSprite
     var rotateModPivotPoint:Vector2 = new Vector2(w / 2, h / 2);
     rotateModPivotPoint.x += pivotOffsetX;
     rotateModPivotPoint.y += pivotOffsetY;
-    var thing:Vector2 = ModchartUtil.rotateAround(rotateModPivotPoint, new Vector2(pos_modified.x, pos_modified.y), angleZ);
+    var thing:Vector2 = #if SCEModchartingTools ModchartUtil.rotateAround(rotateModPivotPoint, new Vector2(pos_modified.x, pos_modified.y),
+      angleZ) #else new Vector2(0, 0) #end;
     pos_modified.x = thing.x;
     pos_modified.y = thing.y;
 
     var rotateModPivotPoint:Vector2 = new Vector2(w / 2, 0);
     rotateModPivotPoint.x += pivotOffsetX;
     rotateModPivotPoint.y += pivotOffsetZ;
-    var thing:Vector2 = ModchartUtil.rotateAround(rotateModPivotPoint, new Vector2(pos_modified.x, pos_modified.z), -angleY);
+    var thing:Vector2 = #if SCEModchartingTools ModchartUtil.rotateAround(rotateModPivotPoint, new Vector2(pos_modified.x, pos_modified.z),
+      -angleY) #else new Vector2(0, 0) #end;
     pos_modified.x = thing.x;
     pos_modified.z = thing.y;
 
     var rotateModPivotPoint:Vector2 = new Vector2(0, h / 2);
     rotateModPivotPoint.x += pivotOffsetZ;
     rotateModPivotPoint.y += pivotOffsetY;
-    var thing:Vector2 = ModchartUtil.rotateAround(rotateModPivotPoint, new Vector2(pos_modified.z, pos_modified.y), -angleX);
+    var thing:Vector2 = #if SCEModchartingTools ModchartUtil.rotateAround(rotateModPivotPoint, new Vector2(pos_modified.z, pos_modified.y),
+      -angleX) #else new Vector2(0, 0) #end;
     pos_modified.z = thing.x;
     pos_modified.y = thing.y;
 

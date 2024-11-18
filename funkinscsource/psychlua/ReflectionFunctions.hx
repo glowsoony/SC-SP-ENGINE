@@ -33,7 +33,7 @@ class ReflectionFunctions
       var split:Array<String> = variable.split('.');
       if (Stage.instance.swagBacks.exists(split[0]))
       {
-        Stage.instance.setPropertyObject(variable, allowInstances ? parseSingleInstance(value) : value);
+        Stage.instance.setPropertyObject(variable, allowInstances ? parseInstances(value) : value);
         return value;
       }
       if (split.length > 1)
@@ -43,11 +43,11 @@ class ReflectionFunctions
           FunkinLua.lua_Custom_Shaders.get(split[0]).hset(split[1], value);
           return value;
         }
-        LuaUtils.setVarInArray(LuaUtils.getPropertyLoop(split, true, allowMaps), split[split.length - 1], allowInstances ? parseSingleInstance(value) : value,
+        LuaUtils.setVarInArray(LuaUtils.getPropertyLoop(split, true, allowMaps), split[split.length - 1], allowInstances ? parseInstances(value) : value,
           allowMaps);
         return value;
       }
-      LuaUtils.setVarInArray(LuaUtils.getTargetInstance(), variable, allowInstances ? parseSingleInstance(value) : value, allowMaps);
+      LuaUtils.setVarInArray(LuaUtils.getTargetInstance(), variable, allowInstances ? parseInstances(value) : value, allowMaps);
       return value;
     });
     funk.set("getPropertyFromClass", function(classVar:String, variable:String, ?allowMaps:Bool = false) {
@@ -88,10 +88,10 @@ class ReflectionFunctions
         for (i in 1...split.length - 1)
           obj = LuaUtils.getVarInArray(obj, split[i], allowMaps);
 
-        LuaUtils.setVarInArray(obj, split[split.length - 1], allowInstances ? parseSingleInstance(value) : value, allowMaps);
+        LuaUtils.setVarInArray(obj, split[split.length - 1], allowInstances ? parseInstances(value) : value, allowMaps);
         return value;
       }
-      LuaUtils.setVarInArray(myClass, variable, allowInstances ? parseSingleInstance(value) : value, allowMaps);
+      LuaUtils.setVarInArray(myClass, variable, allowInstances ? parseInstances(value) : value, allowMaps);
       return value;
     });
     funk.set("getPropertyFromGroup", function(group:String, index:Int, variable:Dynamic, ?allowMaps:Bool = false) {
@@ -144,14 +144,13 @@ class ReflectionFunctions
               {
                 if (Type.typeof(variable) == ValueType.TInt)
                 {
-                  leArray[variable] = allowInstances ? parseSingleInstance(value) : value;
+                  leArray[variable] = allowInstances ? parseInstances(value) : value;
                   return value;
                 }
-                LuaUtils.setGroupStuff(leArray, variable, allowInstances ? parseSingleInstance(value) : value, allowMaps);
+                LuaUtils.setGroupStuff(leArray, variable, allowInstances ? parseInstances(value) : value, allowMaps);
               }
             default: // Is Group
-              LuaUtils.setGroupStuff(Reflect.getProperty(realObject, 'members')[index], variable, allowInstances ? parseSingleInstance(value) : value,
-                allowMaps);
+              LuaUtils.setGroupStuff(Reflect.getProperty(realObject, 'members')[index], variable, allowInstances ? parseInstances(value) : value, allowMaps);
           }
         }
         else
@@ -224,10 +223,11 @@ class ReflectionFunctions
       }
     });
 
-    funk.set("callMethod", function(funcToRun:String, ?args:Array<Dynamic> = null) {
+    funk.set("callMethod", function(funcToRun:String, ?args:Array<Dynamic>) {
       var parent:Dynamic = PlayState.instance;
       var split:Array<String> = funcToRun.split('.');
       var varParent:Dynamic = MusicBeatState.variableMap(split[0].trim()).get(split[0].trim());
+      if (!Std.isOfType(args, Array)) args = [];
       if (varParent != null)
       {
         split.shift();
@@ -241,11 +241,13 @@ class ReflectionFunctions
       }
       return Reflect.callMethod(null, parent, parseInstances(args));
     });
-    funk.set("callMethodFromClass", function(className:String, funcToRun:String, ?args:Array<Dynamic> = null) {
+    funk.set("callMethodFromClass", function(className:String, funcToRun:String, ?args:Array<Dynamic>) {
+      if (!Std.isOfType(args, Array)) args = [];
       return callMethodFromObject(Type.resolveClass(className), funcToRun, parseInstances(args));
     });
 
-    funk.set("createInstance", function(variableToSave:String, className:String, ?args:Array<Dynamic> = null) {
+    funk.set("createInstance", function(variableToSave:String, className:String, ?args:Array<Dynamic>) {
+      if (!Std.isOfType(args, Array)) args = [];
       variableToSave = variableToSave.trim().replace('.', '');
       if (MusicBeatState.variableMap(variableToSave).get(variableToSave) == null)
       {
@@ -308,12 +310,19 @@ class ReflectionFunctions
     });
   }
 
-  static function parseInstances(args:Array<Dynamic>)
+  static function parseInstanceArray(arg:Array<Dynamic>)
   {
-    if (args == null) return [];
-    for (i in 0...args.length)
-      args[i] = parseSingleInstance(args[i]);
-    return args;
+    final newArray:Array<Dynamic> = [];
+    for (val in arg)
+      newArray.push(parseInstances(val));
+    return newArray;
+  }
+
+  public static function parseInstances(arg:Dynamic):Dynamic
+  {
+    if (Std.isOfType(arg, Array)) return parseInstanceArray(arg);
+    else
+      return parseSingleInstance(arg);
   }
 
   public static function parseSingleInstance(arg:Dynamic)

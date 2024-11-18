@@ -524,8 +524,7 @@ class NoteSplashEditorState extends MusicBeatState
     curText.text += 'Current Animation: ${curAnim == null || curAnim.length < 1 ? "NONE" : curAnim}';
     if (config != null && !curText.text.contains('NONE'))
     {
-      var offsets:Array<Float> = try config.animations.get(curAnim).offsets
-      catch (e) [0, 0];
+      var offsets:Array<Float> = try config.animations.get(curAnim).offsets catch (e) [0, 0];
       curText.text += ' ($offsets)'.replace(',', ', ');
     }
 
@@ -838,7 +837,7 @@ class NoteSplashEditorState extends MusicBeatState
     _file.addEventListener(Event.SELECT, onLoadComplete);
     _file.addEventListener(Event.CANCEL, onLoadCancel);
     _file.addEventListener(IOErrorEvent.IO_ERROR, onLoadError);
-    _file.browse([#if windows jsonFilter #end]);
+    _file.browse([#if !mac jsonFilter #end]);
   }
 
   function onLoadComplete(_):Void

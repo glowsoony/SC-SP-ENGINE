@@ -3,7 +3,6 @@ package objects.note;
 class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
 {
   public var enabled:Bool = true;
-  public var isPlayer:Bool = false;
   public var canSplash:Bool = false;
   public var isReady(get, never):Bool;
 
@@ -21,27 +20,24 @@ class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
     return false;
   }
 
-  public function new(enabled:Bool, isPlayer:Bool, canSplash:Bool = false)
+  public function new()
   {
-    this.enabled = enabled;
-    this.isPlayer = isPlayer;
-    this.canSplash = canSplash;
-    super(0, 0, 4);
-    for (i in 0...maxSize)
-      addHolds(i);
+    super(0, 0, 0);
   }
 
-  public dynamic function setParent()
+  public dynamic function setParentAndCreate(strumLine:StrumLine, amount:Int)
   {
-    for (i in 0...maxSize)
+    for (i in 0...amount)
     {
-      if (PlayState.instance != null) this.members[i].parentStrum = PlayState.instance.strumLineNotes.members[isPlayer ? i + 4 : i];
+      addHold(i);
+      this.members[i].parentStrum = strumLine.members[i];
     }
   }
 
-  public dynamic function addHolds(i:Int)
+  public var colors:Array<String> = ["Purple", "Blue", "Green", "Red"];
+
+  public dynamic function addHold(i:Int)
   {
-    final colors:Array<String> = ["Purple", "Blue", "Green", "Red"];
     final hcolor:String = colors[i];
     final hold:HoldCoverSprite = new HoldCoverSprite();
     hold.initFrames(i, hcolor);

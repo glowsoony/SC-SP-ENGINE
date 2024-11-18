@@ -23,9 +23,7 @@ import substates.PauseSubState;
 import substates.GameOverSubstate;
 import psychlua.LuaUtils;
 import psychlua.LuaUtils.LuaTweenOptions;
-#if HSCRIPT_ALLOWED
 import psychlua.HScript;
-#end
 import psychlua.ModchartSprite;
 import haxe.PosInfos;
 import tjson.TJSON as Json;
@@ -76,13 +74,42 @@ class FunkinLua
 
   public static var instance:FunkinLua = null;
 
-  #if HSCRIPT_ALLOWED
-  public var hscript:HScript = null;
-  #end
-
   public var callbacks:Map<String, Dynamic> = new Map<String, Dynamic>();
 
   public static var customFunctions:Map<String, Dynamic> = new Map<String, Dynamic>();
+
+  #if LUA_ALLOWED
+  public var parentLua:FunkinLua;
+  #end
+
+  #if HSCRIPT_ALLOWED
+  public var hscript:HScript = null;
+
+  public function initHaxeModule(code:String = '', ?varsToBring:Dynamic, ?isHxStage:Bool)
+  {
+    @:privateAccess {
+      if (hscript == null)
+      {
+        trace('initializing haxe interp for: $scriptName');
+        hscript = new HScript(this);
+      }
+      try
+      {
+        if (hscript.scriptCode != code)
+        {
+          hscript.scriptCode = code;
+          hscript.parse(true);
+        }
+      }
+      catch (e)
+      {
+        throw e;
+      }
+      hscript.varsToBring = varsToBring;
+      hscript.isHxStage = isHxStage;
+    }
+  }
+  #end
 
   public static var lua_Cameras:Map<String, LuaCamera> = [];
   public static var lua_Shaders:Map<String, shaders.ShaderBase> = [];
@@ -1977,10 +2004,10 @@ class FunkinLua
         return closed;
       });
 
+      HScript.implement(this);
       #if DISCORD_ALLOWED DiscordClient.addLuaCallbacks(this); #end
       #if ACHIEVEMENTS_ALLOWED Achievements.addLuaCallbacks(this); #end
       #if TRANSLATIONS_ALLOWED Language.addLuaCallbacks(this); #end
-      #if HSCRIPT_ALLOWED HScript.implement(this); #end
       #if VIDEOS_ALLOWED VideoFunctions.implement(this); #end
       #if flxanimate FlxAnimateFunctions.implement(this); #end
       #if SCEModchartingTools
@@ -2011,12 +2038,7 @@ class FunkinLua
       var resultStr:String = Lua.tostring(lua, result);
       if (resultStr != null && result != 0)
       {
-        Debug.logInfo(resultStr);
-        #if windows
-        Debug.displayAlert(resultStr, 'Error on lua script!');
-        #else
-        luaTrace('$scriptName\n$resultStr', true, false, FlxColor.RED);
-        #end
+        luaTrace('ERROR ON LOADING ($scriptName): $resultStr', true, false, 0xffb30000);
         stop();
         return;
       }

@@ -120,7 +120,17 @@ class PhillyBlazin extends BaseStage
     }
     abot.color = 0xFF888888;
 
-    var unspawnNotes:CustomArrayGroup<Note> = cast game.strumLineNotes.unspawnNotes;
+    var unspawnNotes:CustomArrayGroup<Note> = cast game.playerStrums.unspawnNotes;
+    for (note in unspawnNotes.members)
+    {
+      if (note == null) continue;
+
+      // override animations for note types
+      note.noAnimation = true;
+      note.noMissAnimation = true;
+    }
+
+    unspawnNotes = cast game.opponentStrums.unspawnNotes;
     for (note in unspawnNotes.members)
     {
       if (note == null) continue;

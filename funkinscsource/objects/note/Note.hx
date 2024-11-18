@@ -378,15 +378,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
   public var parentStrumline:StrumLine;
 
   // Used in-game to control the scroll speed within a song
-  public var noteScrollSpeed(default, set):Float = 1.0;
-  public var allowScrollSpeedOverride:Bool = true;
-
-  private function set_noteScrollSpeed(value:Float):Float
-  {
-    var overrideSpeed:Float = parentStrumline?.scrollSpeed ?? 1.0;
-    noteScrollSpeed = allowScrollSpeedOverride ? overrideSpeed : value;
-    return allowScrollSpeedOverride ? overrideSpeed : value;
-  }
+  public var noteScrollSpeed:Float = 1.0;
 
   public var inEditor:Bool = false;
 
@@ -470,24 +462,18 @@ class Note extends ModchartArrow implements ICloneable<Note>
         prevNote.scale.y *= noteScrollSpeed;
 
         // Let's see if I might un-null it!
-        if (!changedSkin)
+        if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture || isPixel)
         {
-          if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture || isPixel)
-          {
-            prevNote.scale.y *= 1.19;
-            prevNote.scale.y *= (6 / height); // Auto adjust note size
-          }
+          prevNote.scale.y *= 1.19;
+          prevNote.scale.y *= (6 / height); // Auto adjust note size
         }
         prevNote.updateHitbox();
       }
 
-      if (!changedSkin)
+      if (PlayState.isPixelStage)
       {
-        if (PlayState.isPixelStage)
-        {
-          scale.y *= PlayState.daPixelZoom;
-          updateHitbox();
-        }
+        scale.y *= PlayState.daPixelZoom;
+        updateHitbox();
       }
       earlyHitMult = 0;
     }
@@ -600,43 +586,8 @@ class Note extends ModchartArrow implements ICloneable<Note>
 
     loadNoteTexture(skin, skinPostfix, skinPixel);
 
-    if (!inEditor)
-    {
-      var becomePixelNote:Bool = isPixel;
-
-      if (isSustainNote)
-      {
-        scale.y = lastScaleY;
-
-        if (changedSkin)
-        {
-          if (wasPixelNote && !becomePixelNote) // fixes the scaling
-          {
-            if (PlayState.SONG != null && !PlayState.SONG.options.notITG)
-            {
-              scale.y /= PlayState.daPixelZoom;
-              scale.y *= 0.7;
-
-              offsetX += 3;
-            }
-          }
-
-          if (becomePixelNote && !wasPixelNote) // fixes the scaling
-          {
-            if (PlayState.SONG != null && !PlayState.SONG.options.notITG)
-            {
-              if (getNoteSkinPostfix().contains('future')) scale.y /= 1.26;
-              else
-                scale.y /= 0.7;
-              scale.y *= PlayState.daPixelZoom;
-
-              offsetX -= 3;
-            }
-          }
-        }
-      }
-      updateHitbox();
-    }
+    if (!inEditor && isSustainNote) scale.y = lastScaleY;
+    updateHitbox();
 
     if (animName != null) animation.play(animName, true);
     if (noteSkin != skin && noteSkin != noteStyle) noteSkin = skin;
@@ -822,7 +773,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
     }
   }
 
-  public dynamic function followStrumArrow(myStrum:StrumArrow, newFollowSpeed:Float = 1)
+  public dynamic function followStrumArrow(myStrum:StrumArrow, pitch:Float = 1)
   {
     var strumX:Float = myStrum.x;
     var strumY:Float = myStrum.y;
@@ -831,7 +782,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
     var strumDirection:Float = myStrum.direction;
     var strumVisible:Bool = myStrum.visible;
 
-    distance = (0.45 * (Conductor.songPosition - strumTime) * newFollowSpeed * multSpeed);
+    distance = (0.45 * (Conductor.songPosition - strumTime) * (noteScrollSpeed / (parentStrumline != null ? parentStrumline.playbackSpeed : pitch)) * multSpeed);
     if (!myStrum.downScroll) distance *= -1;
 
     if (copyAngle) angle = strumDirection - 90 + strumAngle + offsetAngle;
@@ -1148,9 +1099,8 @@ class Note extends ModchartArrow implements ICloneable<Note>
           rgbShader.b = prevNote.rgbShader.b;
         }
       case 'Rainbow': // Code borrowed from JS Engine
-        var superCoolColor = new FlxColor(0xFFFF0000);
+        var superCoolColor:FlxColor = 0xFFFF0000;
         superCoolColor.hue = (strumTime / 5000 * 360) % 360;
-        var coolDarkColor = superCoolColor;
         rgbShader.r = superCoolColor;
         rgbShader.g = FlxColor.WHITE;
         rgbShader.b = superCoolColor.getDarkened(0.7);

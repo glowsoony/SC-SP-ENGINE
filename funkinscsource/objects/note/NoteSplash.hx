@@ -187,9 +187,9 @@ class NoteSplash extends FunkinSCSprite
     return finalSplashSkin;
   }
 
-  public dynamic function spawnSplashNote(note:Note, ?noteData:Null<Int>, ?opponentSplashes:Bool = false, ?randomize:Bool = true)
+  public dynamic function spawnSplashNote(note:Note, ?noteData:Null<Int>, ?randomize:Bool = true)
   {
-    if (getTexture(opponentSplashes, note) != null) loadSplash(getTexture(opponentSplashes, note));
+    if (getTexture(this.opponentSplashes, note) != null) loadSplash(getTexture(this.opponentSplashes, note));
 
     if (note != null && note.noteSplashData.disabled) return;
     if (babyArrow != null) setPosition(babyArrow.x, babyArrow.y); // To prevent it from being misplaced for one game tick

@@ -2,7 +2,7 @@
   "animations": [
     {
       "loop": false,
-      "offsets": [7, 0],
+      "offsets": [0, 0],
       "fps": 24,
       "anim": "idle",
       "indices": [],

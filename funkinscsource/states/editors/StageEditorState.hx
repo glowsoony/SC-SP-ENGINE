@@ -1632,7 +1632,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
       new FileFilter('JSON (Aseprite)', '*.json'),
       new FileFilter('TXT (Packer)', '*.txt')
     ];
-    _file.browse(filters);
+    _file.browse(#if !mac filters #else [] #end);
   }
 
   private function onLoadComplete(_):Void

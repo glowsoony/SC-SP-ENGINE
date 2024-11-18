@@ -170,7 +170,21 @@ class PhillyStreets extends BaseStage
     if (_song.gameOverChar == null || _song.gameOverChar.trim().length < 1) GameOverSubstate.characterName = 'pico-dead';
 
     abot.setPosition(gf.x, gf.y + 350);
-    var unspawnNotes:CustomArrayGroup<Note> = cast game.strumLineNotes.unspawnNotes;
+    var unspawnNotes:CustomArrayGroup<Note> = cast game.playerStrums.unspawnNotes;
+    for (note in unspawnNotes.members)
+    {
+      if (note == null) continue;
+
+      // override animations for note types
+      switch (note.noteType)
+      {
+        case 'weekend-1-firegun':
+          note.blockHit = true;
+      }
+      if (!noteTypes.contains(note.noteType)) noteTypes.push(note.noteType);
+    }
+
+    unspawnNotes = cast game.opponentStrums.unspawnNotes;
     for (note in unspawnNotes.members)
     {
       if (note == null) continue;
@@ -823,7 +837,7 @@ class PhillyStreets extends BaseStage
           }
         }
 
-        game.notes.forEachAlive(function(note:Note) {
+        game.playerStrums.notes.forEachAlive(function(note:Note) {
           if (note.noteType == 'weekend-1-firegun') note.blockHit = false;
         });
         showPicoFade();

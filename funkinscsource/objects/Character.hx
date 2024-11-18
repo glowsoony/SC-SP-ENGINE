@@ -5,10 +5,22 @@ import flixel.util.FlxDestroyUtil;
 import flixel.graphics.frames.FlxAtlasFrames;
 import openfl.utils.Assets;
 import haxe.Json;
-import objects.stage.TankmenBG; #if LUA_ALLOWED import psychlua.*; #else import psychlua.LuaUtils;
-import psychlua.HScript; #end#if (HSCRIPT_ALLOWED && HScriptImproved) import codenameengine.scripting.Script as HScriptCode; #end import shaders.FNFShader; #if HSCRIPT_ALLOWED import scripting.*;
-import crowplexus.iris.Iris; #end class Character extends FunkinSCSprite
+import objects.stage.TankmenBG;
+#if LUA_ALLOWED
+import psychlua.*;
+#else
+import psychlua.LuaUtils;
+import psychlua.HScript;
+#end
+#if (HSCRIPT_ALLOWED && HScriptImproved)
+import codenameengine.scripting.Script as HScriptCode;
+#end
+#if HSCRIPT_ALLOWED
+import scripting.*;
+import crowplexus.iris.Iris;
+#end
 
+class Character extends FunkinSCSprite
 {
   /**
    * Default Character In case not finding the original or is just the default one.
@@ -822,6 +834,8 @@ import crowplexus.iris.Iris; #end class Character extends FunkinSCSprite
     if (color != curColor && doMissThing) color = curColor;
   }
 
+  public var characterAnimationsAllowed:Bool = true;
+
   var missed:Bool = false;
 
   public var doAffectForAnimationName:Bool = true;
@@ -1235,21 +1249,20 @@ import crowplexus.iris.Iris; #end class Character extends FunkinSCSprite
 
   public function initHScript(file:String)
   {
-    var newScript:HScript = null;
+    final times:Float = Date.now().getTime();
+    var newScript:HScript = new HScript(null, file);
+
     try
     {
-      var times:Float = Date.now().getTime();
-      newScript = new HScript(null, file);
-      newScript.executeFunction('onCreate');
+      newScript.parse(true);
+      newScript.run('onCreate');
       hscriptArray.push(newScript);
       Debug.logInfo('initialized Hscript interp successfully: $file (${Std.int(Date.now().getTime() - times)}ms)');
     }
-    catch (e:Dynamic)
+    catch (e:crowplexus.hscript.Expr.Error)
     {
-      var newScript:HScript = cast(Iris.instances.get(file), HScript);
-      Debug.logInfo('ERROR ON LOADING ($file) - $e');
-
-      if (newScript != null) newScript.destroy();
+      newScript.errorCaught(e);
+      newScript.destroy();
     }
   }
 
@@ -1444,24 +1457,13 @@ import crowplexus.iris.Iris; #end class Character extends FunkinSCSprite
       @:privateAccess
       if (script == null || !script.exists(funcToCall) || exclusions.contains(script.origin)) continue;
 
-      try
-      {
-        var callValue = script.call(funcToCall, args);
-        var myValue:Dynamic = callValue.signature;
+      var callValue:Dynamic = script.run(funcToCall, args);
+      if (callValue == null) continue;
 
-        // compiler fuckup fix
-        if ((myValue == LuaUtils.Function_StopHScript || myValue == LuaUtils.Function_StopAll)
-          && !excludeValues.contains(myValue)
-          && !ignoreStops)
-        {
-          returnVal = myValue;
-          break;
-        }
-        if (myValue != null && !excludeValues.contains(myValue)) returnVal = myValue;
-      }
-      catch (e:Dynamic)
+      if (!excludeValues.contains(callValue))
       {
-        Debug.logInfo('ERROR (${script.origin}: $funcToCall) - $e');
+        if ((callValue == LuaUtils.Function_StopHScript || callValue == LuaUtils.Function_StopAll) && !ignoreStops) return callValue;
+        if (callValue != null && !excludeValues.contains(callValue)) returnVal = callValue;
       }
     }
     #end
