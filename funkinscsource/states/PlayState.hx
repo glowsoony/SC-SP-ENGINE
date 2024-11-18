@@ -2353,7 +2353,7 @@ class PlayState extends MusicBeatState
 
     spr.screenCenter();
     spr.antialiasing = antialias;
-    insert(members.indexOf(playerStrums) + 2, spr);
+    insert(members.indexOf(opponentStrums) + 1, spr);
     createTween(spr, {y: 0, alpha: 0}, Conductor.crochet / 1000,
       {
         ease: FlxEase.cubeInOut,
