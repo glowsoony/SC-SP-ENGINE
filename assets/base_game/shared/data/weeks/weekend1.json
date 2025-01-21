@@ -16,7 +16,5 @@
 
   "hideStoryMode": false,
   "hideFreeplay": false,
-  "difficulties": "Easy, Normal, Hard",
-
-  "blockOpponentMode": true
+  "difficulties": "Easy, Normal, Hard"
 }

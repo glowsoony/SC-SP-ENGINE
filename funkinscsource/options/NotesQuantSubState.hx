@@ -176,9 +176,32 @@ class NotesQuantSubState extends MusicBeatSubState
   var changingNote:Bool = false;
   var holdingOnObj:FlxSprite;
   var allowedTypeKeys:Map<FlxKey, String> = [
-    ZERO => '0', ONE => '1', TWO => '2', THREE => '3', FOUR => '4', FIVE => '5', SIX => '6', SEVEN => '7', EIGHT => '8', NINE => '9', NUMPADZERO => '0',
-    NUMPADONE => '1', NUMPADTWO => '2', NUMPADTHREE => '3', NUMPADFOUR => '4', NUMPADFIVE => '5', NUMPADSIX => '6', NUMPADSEVEN => '7', NUMPADEIGHT => '8',
-    NUMPADNINE => '9', A => 'A', B => 'B', C => 'C', D => 'D', E => 'E', F => 'F'
+    ZERO => '0',
+    ONE => '1',
+    TWO => '2',
+    THREE => '3',
+    FOUR => '4',
+    FIVE => '5',
+    SIX => '6',
+    SEVEN => '7',
+    EIGHT => '8',
+    NINE => '9',
+    NUMPADZERO => '0',
+    NUMPADONE => '1',
+    NUMPADTWO => '2',
+    NUMPADTHREE => '3',
+    NUMPADFOUR => '4',
+    NUMPADFIVE => '5',
+    NUMPADSIX => '6',
+    NUMPADSEVEN => '7',
+    NUMPADEIGHT => '8',
+    NUMPADNINE => '9',
+    A => 'A',
+    B => 'B',
+    C => 'C',
+    D => 'D',
+    E => 'E',
+    F => 'F'
   ];
 
   override function update(elapsed:Float)

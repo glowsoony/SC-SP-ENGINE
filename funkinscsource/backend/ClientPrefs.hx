@@ -20,7 +20,7 @@ import states.TitleState;
   public var splashAlpha:Float = 0.6;
   public var lowQuality:Bool = false;
   public var shaders:Bool = true;
-  public var cacheOnGPU:Bool = #if ! switch false #else true #end; // From Stilic
+  public var cacheOnGPU:Bool = #if ! switch false #else true #end; // From Raltyro(improved by Stilic)
   public var framerate:Int = 60;
   public var cursing:Bool = true;
   public var violence:Bool = true;
@@ -196,6 +196,8 @@ import states.TitleState;
   public var holdCoverPlay:Bool = true;
 
   public var colorNoteType:String = 'None';
+
+  public var hudSettings:Map<String, Dynamic> = [];
 }
 
 class ClientPrefs
@@ -312,7 +314,7 @@ class ClientPrefs
     if (FlxG.save.data.framerate == null)
     {
       final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
-      data.framerate = Std.int(FlxMath.bound(refreshRate, 60, 240));
+      data.framerate = Std.int(FlxMath.bound(refreshRate, 1, 240));
     }
     #end
 
@@ -412,4 +414,22 @@ class ClientPrefs
     }
     return false;
   }
+
+  public static function get(key:String, isDefault:Bool = false):Dynamic
+    return Reflect.field(isDefault ? defaultData : data, key);
+
+  public static function set(key:String, value:Dynamic, isDefault:Bool = false):Void
+    Reflect.setField(isDefault ? defaultData : data, value, key);
+
+  public static function getKey(key:String, isDefault:Bool = false):Array<FlxKey>
+    return isDefault ? defaultKeys.get(key) : keyBinds.get(key);
+
+  public static function setKey(key:String, newKeys:Array<FlxKey>, isDefault:Bool = false):Void
+    isDefault ? defaultKeys.set(key, newKeys) : keyBinds.set(key, newKeys);
+
+  public static function getGamepadBind(bind:String, isDefault:Bool = false):Array<FlxGamepadInputID>
+    return isDefault ? defaultButtons.get(bind) : gamepadBinds.get(bind);
+
+  public static function setGamepadBind(bind:String, newBinds:Array<FlxGamepadInputID>, isDefault:Bool = false):Void
+    isDefault ? defaultButtons.set(bind, newBinds) : gamepadBinds.set(bind, newBinds);
 }

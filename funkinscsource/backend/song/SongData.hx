@@ -442,7 +442,7 @@ typedef CharacterData =
   var opponent:String;
 
   @:optional
-  @default('')
+  @:default('')
   var secondOpponent:String;
 }
 
@@ -465,7 +465,7 @@ class SongCharacterData
   public var opponent:String = '';
 
   @:optional
-  @default('')
+  @:default('')
   public var secondOpponent:String = "";
 }
 
@@ -520,4 +520,16 @@ typedef SwagSong =
    * Using this, you can create custom data inside the song Json. But data only you can use for whatever else.
    */
   var ?_extraData:Dynamic;
+
+  /**
+   * Identifier for strumLins and their ids.
+   */
+  var ?strumLineIds:Array<Int>;
+
+  /**
+   * Can be used for multi-keys but personally for space bar mechanic
+   */
+  @:optional
+  @:default(4)
+  var totalColumns:Int;
 }

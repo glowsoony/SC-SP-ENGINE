@@ -986,11 +986,11 @@ class SupportBETAFunctions
     });
 
     funk.set("changeDadIcon", function(id:String) {
-      PlayState.instance.iconP2.changeIcon(id);
+      PlayState.instance.hud.iconP2.changeIcon(id);
     });
 
     funk.set("changeBFIcon", function(id:String) {
-      PlayState.instance.iconP1.changeIcon(id);
+      PlayState.instance.hud.iconP1.changeIcon(id);
     });
 
     funk.set("changeIcon", function(obj:String, iconName:String) {
@@ -1019,11 +1019,11 @@ class SupportBETAFunctions
     });
 
     funk.set("changeDadIconNew", function(id:String) {
-      PlayState.instance.iconP2.changeIcon(id);
+      PlayState.instance.hud.iconP2.changeIcon(id);
     });
 
     funk.set("changeBFIconNew", function(id:String) {
-      PlayState.instance.iconP1.changeIcon(id);
+      PlayState.instance.hud.iconP1.changeIcon(id);
     });
 
     funk.set("setWindowPos", function(x:Int = 0, y:Int = 0) {
@@ -1084,47 +1084,12 @@ class SupportBETAFunctions
       else
         player = bfColor;
 
-      var flxStringUsageBool:Bool = ((opponent.contains('#') || opponent.contains('#FF') || opponent.contains('0x'))
+      final colorString:Bool = ((opponent.contains('#') || opponent.contains('#FF') || opponent.contains('0x'))
         || (player.contains('#') || player.contains('#FF') || player.contains('0x')));
+      final opponentColor:FlxColor = colorString ? FlxColor.fromString(opponent) : CoolUtil.colorFromString(opponent);
+      final playerColor:FlxColor = colorString ? FlxColor.fromString(player) : CoolUtil.colorFromString(player);
 
-      if (PlayState.SONG.options.oldBarSystem)
-      {
-        if (!ClientPrefs.data.gradientSystemForOldBars)
-        {
-          if (flxStringUsageBool)
-          {
-            PlayState.instance.healthBar.createFilledBar((PlayState.instance.opponentMode ? FlxColor.fromString(player) : FlxColor.fromString(opponent)),
-              (PlayState.instance.opponentMode ? FlxColor.fromString(opponent) : FlxColor.fromString(player)));
-          }
-          else
-          {
-            PlayState.instance.healthBar.createFilledBar((PlayState.instance.opponentMode ? CoolUtil.colorFromString(player) : CoolUtil.colorFromString(opponent)),
-              (PlayState.instance.opponentMode ? CoolUtil.colorFromString(opponent) : CoolUtil.colorFromString(player)));
-          }
-        }
-        else
-        {
-          if (flxStringUsageBool) PlayState.instance.healthBar.createGradientBar([FlxColor.fromString(player), FlxColor.fromString(opponent)],
-            [FlxColor.fromString(player), FlxColor.fromString(opponent)]);
-          else
-            PlayState.instance.healthBar.createGradientBar([FlxColor.fromString(player), FlxColor.fromString(opponent)],
-              [FlxColor.fromString(player), FlxColor.fromString(opponent)]);
-        }
-        PlayState.instance.healthBar.updateBar();
-      }
-      else
-      {
-        if (flxStringUsageBool)
-        {
-          PlayState.instance.healthBarNew.setColors(FlxColor.fromString(opponent), FlxColor.fromString(player));
-          PlayState.instance.healthBarHitNew.setColors(FlxColor.fromString(opponent), FlxColor.fromString(player));
-        }
-        else
-        {
-          PlayState.instance.healthBarNew.setColors(CoolUtil.colorFromString(opponent), CoolUtil.colorFromString(player));
-          PlayState.instance.healthBarHitNew.setColors(CoolUtil.colorFromString(opponent), CoolUtil.colorFromString(player));
-        }
-      }
+      PlayState.instance.hud.setHealthColors(opponentColor, playerColor);
     });
 
     funk.set("getScared", function(id:String) {
@@ -1201,62 +1166,6 @@ class SupportBETAFunctions
       var newShader:ColorSwap = new ColorSwap();
       newShader.hue = hue / 360;
       shit.shader = newShader.shader;
-    });
-
-    funk.set("changeNotes", function(style:String, character:String, ?postfix:String = "") {
-      switch (character)
-      {
-        case 'boyfriend' | 'bf':
-          PlayState.instance.notes.forEach(function(daNote:Note) {
-            if (daNote.mustPress)
-            {
-              if (daNote.noteType != "") PlayState.instance.callOnScripts('onNoteChange',
-                [style, postfix]); // i really don't wanna use this but I will if I have to
-              else
-                daNote.reloadNote(style, postfix);
-            }
-          });
-        default:
-          PlayState.instance.notes.forEach(function(daNote:Note) {
-            if (!daNote.mustPress)
-            {
-              if (daNote.noteType != "") PlayState.instance.callOnScripts('onNoteChange',
-                [style, postfix]); // i really don't wanna use this but I will if I have to
-              else
-                daNote.reloadNote(style, postfix);
-            }
-          });
-      }
-    });
-
-    funk.set("changeNotes2", function(style:String, character:String, ?postfix:String = "") {
-      if (character.contains('boyfriend'))
-      {
-        for (i in 0...PlayState.instance.unspawnNotes.length)
-        {
-          var daNote = PlayState.instance.unspawnNotes.members[i];
-          if (daNote.mustPress) daNote.reloadNote(style, postfix);
-        }
-      }
-      else
-      {
-        for (i in 0...PlayState.instance.unspawnNotes.length)
-        {
-          var daNote = PlayState.instance.unspawnNotes.members[i];
-          if (!daNote.mustPress) daNote.reloadNote(style, postfix);
-        }
-      }
-    });
-
-    funk.set("changeIndividualNotes", function(style:String, i:Int, ?postfix:String = "") {
-      PlayState.instance.unspawnNotes.members[i].reloadNote(style, postfix);
-    });
-
-    funk.set("playStrumAnim", function(isDad:Bool, id:Int, time:Float, isSus:Bool = false) {
-      if (!ClientPrefs.data.LightUpStrumsOP && isDad) return;
-      if (time > 0) PlayState.instance.strumPlayAnim(isDad, id, time / 1000 / PlayState.instance.playbackRate, isSus);
-      else
-        PlayState.instance.strumPlayAnim(isDad, id, Conductor.stepCrochet * 1.25 / 1000 / PlayState.instance.playbackRate, isSus);
     });
 
     // All new functions that are BETADCIU
@@ -1350,6 +1259,6 @@ class SupportBETAFunctions
     final leSprite:HealthIcon = new HealthIcon(character, player);
     MusicBeatState.getVariables("Icon").set(tag, leSprite); // yes
     LuaUtils.getTargetInstance().add(leSprite);
-    if (PlayState.instance != null) leSprite.cameras = !player ? PlayState.instance.iconP2.cameras : PlayState.instance.iconP1.cameras;
+    if (PlayState.instance != null) leSprite.cameras = !player ? PlayState.instance.hud.iconP2.cameras : PlayState.instance.hud.iconP1.cameras;
   }
 }

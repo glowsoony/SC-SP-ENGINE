@@ -12,7 +12,7 @@ haxelib install hxgamejolt-api
 haxelib install markdown
 haxelib install format
 haxelib install openfl
-haxelib git flixel https://github.com/glowsoony/flixel/tree/Main-SCE
+haxelib git flixel https://github.com/glowsoony/flixel/tree/main
 haxelib git flixel-addons https://github.com/glowsoony/flixel-addons/tree/dev
 haxelib git hscript-improved https://github.com/glowsoony/hscript-improved/tree/custom-classes
 haxelib git linc_luajit https://github.com/superpowers04/linc_luajit

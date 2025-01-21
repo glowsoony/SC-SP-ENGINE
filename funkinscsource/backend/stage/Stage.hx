@@ -147,6 +147,7 @@ class Stage extends backend.stage.base.BaseStage
 
     // Looks for two types of stages or more
     startStageScriptsNamed(curStage, preloading);
+    setOnScripts('currentStage', this);
     setOnScripts('stageSpriteHandler', stageSpriteHandler);
   }
 
@@ -599,7 +600,7 @@ class Stage extends backend.stage.base.BaseStage
   public function initHScript(file:String)
   {
     final times:Float = Date.now().getTime();
-    var newScript:HScript = new HScript(null, file, null, true);
+    var newScript:HScript = new HScript(null, file, null, false, this);
 
     try
     {
@@ -1303,7 +1304,8 @@ class Stage extends backend.stage.base.BaseStage
     for (script in hscriptArray)
       if (script != null)
       {
-        script.executeFunction('onDestroy');
+        var ny:Dynamic = script.get('onDestroy');
+        if (ny != null && Reflect.isFunction(ny)) ny();
         script.destroy();
       }
     hscriptArray = null;

@@ -7,6 +7,28 @@ class RGBPalette extends ShaderBase
   public var b(default, set):FlxColor;
   public var mult(default, set):Float;
 
+  public function copyValues(tempShader:RGBPalette)
+  {
+    if (tempShader != null)
+    {
+      var rA:Array<Float> = [];
+      var gA:Array<Float> = [];
+      var bA:Array<Float> = [];
+      for (i in 0...3)
+      {
+        rA.push(tempShader.shader.getFloatArray('r')[i]);
+        gA.push(tempShader.shader.getFloatArray('g')[i]);
+        bA.push(tempShader.shader.getFloatArray('b')[i]);
+      }
+      shader.setFloatArray('r', rA);
+      shader.setFloatArray('g', gA);
+      shader.setFloatArray('b', bA);
+      shader.setFloat('mult', tempShader.shader.getFloat('mult'));
+    }
+    else
+      shader.setFloat('mult', 0.0);
+  }
+
   public var stealthGlow(default, set):Float;
   public var stealthGlowRed(default, set):Float;
   public var stealthGlowGreen(default, set):Float;
@@ -177,7 +199,7 @@ class RGBShaderReference
     return (stealthGlowBlue = parent.stealthGlowBlue = value);
   }
 
-  public var allowNew = true;
+  public var allowNew:Bool = true;
 
   private function cloneOriginal()
   {

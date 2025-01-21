@@ -3,11 +3,9 @@ package objects;
 import flixel.addons.display.FlxPieDial;
 #if (VIDEOS_ALLOWED && hxvlc)
 import hxvlc.flixel.FlxVideoSprite;
-#end
 
 class VideoSprite extends FlxSpriteGroup
 {
-  #if (VIDEOS_ALLOWED && hxvlc)
   public static var _videos:Array<VideoSprite> = [];
 
   public var finishCallback:Void->Void = null;
@@ -109,7 +107,6 @@ class VideoSprite extends FlxSpriteGroup
 
     _videos.remove(this);
     if (PlayState.instance != null) PlayState.instance.remove(this);
-    super.destroy();
   }
 
   override function update(elapsed:Float)
@@ -133,6 +130,7 @@ class VideoSprite extends FlxSpriteGroup
         videoSprite.bitmap.onEndReached.dispatch();
         if (PlayState.instance != null) PlayState.instance.remove(this);
         Debug.logInfo('Skipped video');
+        super.destroy();
         return;
       }
     }
@@ -188,5 +186,7 @@ class VideoSprite extends FlxSpriteGroup
     isPaused = true;
     videoSprite?.pause();
   }
-  #end
 }
+#else
+class VideoSprite extends FlxSpriteGroup {}
+#end

@@ -812,15 +812,7 @@ class GocpEffect extends ShaderBase
   }
 }
 
-class GreyscaleEffect extends ShaderBase // Has No Values To Add, Change, Take
-{
-  public function new()
-  {
-    super('Greyscale');
-  }
-}
-
-class GreyscaleEffectNew extends ShaderBase
+class GreyscaleEffect extends ShaderBase
 {
   public var strength(default, set):Float = 0.0;
 

@@ -1,26 +1,31 @@
 package objects.note;
 
+import utils.tools.ICloneable;
 import flixel.util.FlxSignal;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import flixel.util.FlxSort;
+import flixel.input.keyboard.FlxKey;
 import backend.CustomArrayGroup;
+import openfl.events.KeyboardEvent;
 
 enum abstract CharacterStrumLine(String) from String to String
 {
-  var DAD = "Dad";
-  var BF = "Boyfriend";
-  var GF = "Girlfriend";
-  var OTHER = "Other";
+  var DAD = "DAD";
+  var BF = "BF";
+  var GF = "GF";
+  var OTHER = "OTHER";
 }
 
 typedef SpawnSplashData =
 {
   @:default(0)
-  var currentDataIndex:Int;
+  public var currentDataIndex:Int;
+
   @:default(null)
-  var targetNote:Note;
+  public var targetNote:Note;
+
   @:default(false)
-  var isPlayer:Bool;
+  public var isPlayer:Bool;
 }
 
 class Limiter
@@ -84,6 +89,16 @@ class Limiter
 
 class StrumLine extends FlxTypedGroup<StrumArrow>
 {
+  public static var STRUM_X:Float = 49;
+  public static var STRUM_X_MIDDLESCROLL:Float = -272;
+
+  public var initialStrumLinePos:FlxPoint = new FlxPoint();
+  public var strumLineName:String = "";
+
+  public var extraData:Map<String, Dynamic> = new Map<String, Dynamic>();
+  public var strumLineID:Int = 0;
+  public var actualStrumLineID:Int = 0;
+
   // Used in-game to control the scroll speed within a song
   public var scrollSpeed(default, set):Float = 1.0;
 
@@ -92,20 +107,14 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     final ratio:Float = value / scrollSpeed; // funny word huh
     if (ratio != 1)
     {
-      if (notes != null && notes.length > 0)
+      for (noteGroup in [notes?.members ?? [], unspawnNotes?.members ?? []])
       {
-        for (note in notes.members)
+        if (noteGroup == null || noteGroup.length < 1) continue;
+
+        for (note in noteGroup)
         {
           note.noteScrollSpeed = value;
-          note.resizeByRatio(ratio);
-        }
-      }
-      if (unspawnNotes != null && unspawnNotes.length > 0)
-      {
-        for (note in unspawnNotes.members)
-        {
-          note.noteScrollSpeed = value;
-          note.resizeByRatio(ratio);
+          note.resizeByRatio(value);
         }
       }
     }
@@ -116,24 +125,15 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
 
   public var notes:FlxTypedGroup<Note> = null;
   public var unspawnNotes:CustomArrayGroup<Note> = new CustomArrayGroup<Note>();
+  public var loadedNotes:CustomArrayGroup<Note> = new CustomArrayGroup<Note>();
   public var isPixelNotes:Bool = false;
-
-  public var allowOverrideCpuControl:Bool = true;
   public var cpuControlled:Bool = false;
 
   public var characterStrumlineType:CharacterStrumLine = DAD;
-  public var strumLines:FlxTypedGroup<StrumLine> = new FlxTypedGroup<StrumLine>();
   public var strumsBlocked:Array<Bool> = [];
 
   public var limiter:Limiter = new Limiter();
   public var ghostTapping:Bool = ClientPrefs.data.ghostTapping;
-
-  function set_cpuControlled(value:Bool):Bool
-  {
-    cpuControlled = value;
-    if (PlayState.instance != null && allowOverrideCpuControl) cpuControlled = PlayState.instance.cpuControlled;
-    return cpuControlled;
-  }
 
   public var drawNotes:Bool = true;
   public var noteKillOffset:Float = 350;
@@ -165,21 +165,34 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
 
   public var characters:Array<Character> = [];
 
-  public function new(?characterStrumLineType:CharacterStrumLine = DAD)
+  public var modchartRendered:Bool = false;
+  public var playNotes:Bool = false;
+  public var isPlayer:Bool = false;
+  public var staticColorStrums:Bool = false;
+
+  public function new(?strumLineId:Int = -1, ?characterStrumLineType:CharacterStrumLine = DAD)
   {
+    this.initialStrumLinePos.set(ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X, ClientPrefs.data.downScroll ? (FlxG.height - 150) : 50);
+    this.strumLineID = strumLineId;
+    this.characterStrumlineType = characterStrumLineType;
     holdCovers.enabled = !(PlayState.SONG == null
       || PlayState.SONG.options.disableHoldCovers
       || PlayState.SONG.options.notITG
-      || !ClientPrefs.data.holdCoverPlay);
+      || ClientPrefs.data.holdCoverPlay);
     holdCovers.canSplash = characterStrumLineType == BF;
     notes = new FlxTypedGroup<Note>();
     noteSplashes = new FlxTypedGroup<NoteSplash>();
-    unspawnNotes.validTime = function(rate:Float = 1, ?ignoreMultSpeed:Bool = false):Bool {
-      final firstMember:Note = unspawnNotes.members[0];
-      if (firstMember != null) return (unspawnNotes.length > 0 && firstMember.validTime(rate, ignoreMultSpeed));
-      return false;
+    for (notes in [unspawnNotes, loadedNotes])
+    {
+      if (notes == null) continue;
+
+      notes.validTime = function(rate:Float = 1, ?ignoreMultSpeed:Bool = false):Bool {
+        final firstMember:Note = notes.members[0];
+        if (firstMember == null) return false;
+        return (notes.length > 0 && firstMember.validTime(rate, ignoreMultSpeed));
+      }
     }
-    calls.onDeleted = function(note:Note, unspawn:Bool) {
+    calls.onDeleted = function(note:Note, unspawn:Bool = false) {
       invalidateNote(note, unspawn);
       calls.noteDeleted.dispatch(note, unspawn);
     }
@@ -187,20 +200,6 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
       note.visible = note.active = false;
       calls.noteNotReady.dispatch(note);
     }
-    registerUnspawnedNotes = function() {
-    }
-    updateNotes = function(daNote:Note) {
-    }
-    invalidateNote = function(note:Note, unspawn:Bool) {
-      if (note == null) return;
-      note.invalidate();
-      if (!unspawn) notes.remove(note, true);
-      else
-        unspawnNotes.remove(note);
-      note.destroy();
-      note = null;
-    }
-    super(0);
     limiter.setNoteLimit = function(maxLimit:Int) {
       notes.maxSize = maxLimit;
     }
@@ -238,34 +237,269 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     calls.onUpdate = function(elapsed) {
     }
     calls.onUpdatePost = function(elapsed) {
-      if (notes != null && notes.exists && notes.active && updateNoteGroup) notes.update(elapsed);
-      if (noteSplashes != null && notes.exists && notes.active && updateSplashGroup) noteSplashes.update(elapsed);
+      if (notes != null && notes.exists && notes.active && updateNoteGroup)
+      {
+        notes.update(elapsed);
+        if (handleHitNotes != null) handleHitNotes();
+      }
+      if (noteSplashes != null && noteSplashes.exists && noteSplashes.active && updateSplashGroup) noteSplashes.update(elapsed);
       if (holdCovers != null && holdCovers.exists && holdCovers.active && updateHoldCoverGroup) holdCovers.update(elapsed);
     }
     calls.onDestroyPost = function() {
       unspawnNotes.clear();
-      if (notes != null) notes = null;
-      if (noteSplashes != null) noteSplashes = null;
-      if (holdCovers != null) holdCovers = null;
+      for (object in [notes, noteSplashes, holdCovers])
+        if (object != null) object = null;
+      initialStrumLinePos = flixel.util.FlxDestroyUtil.destroy(initialStrumLinePos);
     }
     calls.onRevivePost = function() {
-      if (notes != null) notes.revive();
-      if (noteSplashes != null) noteSplashes.revive();
-      if (holdCovers != null) holdCovers.revive();
+      for (object in [notes, noteSplashes, holdCovers])
+        if (object != null) object.revive();
     }
     calls.onKillPost = function() {
-      if (notes != null) notes.kill();
-      if (noteSplashes != null) noteSplashes.kill();
-      if (holdCovers != null) holdCovers.kill();
+      for (object in [notes, noteSplashes, holdCovers])
+        if (object != null) object.kill();
     }
+    calls.onClearNotesBefore = function(time:Float = 0, ?completelyClearNotes:Bool = false) {
+      var i:Int = unspawnNotes.length - 1;
+      while (i >= 0)
+      {
+        final daNote:Note = unspawnNotes.members[i];
+        if (!completelyClearNotes)
+        {
+          if (daNote.strumTime - 350 < time) invalidateNote(daNote, true);
+        }
+        else
+          invalidateNote(daNote, true);
+        --i;
+      }
+
+      i = notes.length - 1;
+      while (i >= 0)
+      {
+        final daNote:Note = notes.members[i];
+        if (!completelyClearNotes)
+        {
+          if (daNote.strumTime - 350 < time) invalidateNote(daNote, false);
+        }
+        else
+          invalidateNote(daNote, false);
+        --i;
+      }
+      calls.clearNotesBefore.dispatch(time, completelyClearNotes);
+    }
+    calls.onIsPixel = function(daNote:Note) {
+      isPixelNotes = daNote.noteSkin.contains('pixel');
+      calls.noteIsPixel.dispatch(daNote);
+    }
+
+    calls.onNotHoldingKey = function() {
+      for (character in characters)
+        character.danceConditions(character.allowHoldTimer(), character.forcedToIdle);
+    }
+
+    createNotes = function(sectionsData:Array<SwagSection>, allowedSections:Array<Int> = null, limit:Float = 0, limitAllowed:Bool = false) {
+      var unspawnNotes:Array<Note> = [];
+      var daSection:Int = 0;
+      var ghostNotesCaught:Int = 0;
+      var daBpm:Float = Conductor.bpm;
+      var oldNote:Note = null;
+      for (section in sectionsData)
+      {
+        if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm) daBpm = section.bpm;
+
+        var doSection:Bool = true;
+        if (allowedSections != null) if (daSection < allowedSections[0] || daSection >= allowedSections[1]) doSection = false;
+        if (doSection)
+        {
+          for (i in 0...section.sectionNotes.length)
+          {
+            final songNotes:Array<Dynamic> = section.sectionNotes[i];
+            final spawnTime:Float = songNotes[0];
+            final noteColumn:Int = Std.int(songNotes[1] % PlayState.SONG.totalColumns);
+            final holdLength:Float = ClientPrefs.getGameplaySetting('sustainnotesactive')
+              && !Math.isNaN(songNotes[2]) ? songNotes[2] : 0.0;
+            final noteType:String = !Std.isOfType(songNotes[3], String) ? Note.defaultNoteTypes[songNotes[3]] : songNotes[3];
+            final noteStrumId:Int = songNotes[4];
+
+            if (noteStrumId != strumLineId) continue;
+
+            if (i != 0)
+            {
+              // CLEAR ANY POSSIBLE GHOST NOTES
+              for (evilNote in unspawnNotes)
+              {
+                final matches:Bool = (noteColumn == evilNote.noteData && strumLineId == evilNote.strumLineID && evilNote.noteType == noteType);
+                if (matches && Math.abs(spawnTime - evilNote.strumTime) == 0.0)
+                {
+                  if (evilNote.tail.length > 0)
+                  {
+                    for (tail in evilNote.tail)
+                    {
+                      tail.destroy();
+                      unspawnNotes.remove(tail);
+                    }
+                  }
+                  evilNote.destroy();
+                  unspawnNotes.remove(evilNote);
+                  ghostNotesCaught++;
+                  // continue;
+                }
+              }
+            }
+            final swagNote:Note = new Note(
+              {
+                strumTime: spawnTime,
+                noteData: noteColumn,
+                isSustainNote: false,
+                noteSkin: PlayState.SONG.options.arrowSkin,
+                prevNote: oldNote,
+                createdFrom: this,
+                scrollSpeed: scrollSpeed,
+                parentStrumline: this,
+                inEditor: false
+              });
+            swagNote.realNoteData = songNotes[1];
+            swagNote.clipToStrum = characterStrumlineType == BF;
+            var altName:String = (section.altAnim
+              || (section.playerAltAnim && characterStrumlineType == BF)
+              || (section.CPUAltAnim && characterStrumlineType == DAD)) ? '-alt' : '';
+            var isPixelNote:Bool = (swagNote.texture.contains('pixel') || swagNote.noteSkin.contains('pixel'));
+            swagNote.setupNote(strumLineId, actualStrumLineID, daSection, noteType);
+            if (swagNote.noteType != 'GF Sing') swagNote.gfNote = (section.gfSection && characterStrumlineType == BF);
+            if (altName == '' && swagNote.noteType == 'Alt Animation') altName = '-alt';
+            swagNote.animSuffix = altName;
+            swagNote.containsPixelTexture = isPixelNote;
+            swagNote.sustainLength = holdLength;
+            swagNote.dType = section.dType;
+            swagNote.scrollFactor.set();
+            swagNote.bpm = daBpm;
+
+            var pushNotes:Bool = !(spawnTime > limit && limitAllowed); // should prevent people from editing audio to end the song early to cheat on leaderboard
+            if (pushNotes) unspawnNotes.push(swagNote);
+
+            final curStepCrochet:Float = 60 / daBpm * 1000 / 4.0;
+            final roundSus:Int = Math.round(swagNote.sustainLength / curStepCrochet);
+            if (roundSus != 0)
+            {
+              for (susNote in 0...roundSus)
+              {
+                oldNote = unspawnNotes[Std.int(unspawnNotes.length - 1)];
+
+                final sustainNote:Note = new Note(
+                  {
+                    strumTime: spawnTime + (curStepCrochet * susNote),
+                    noteData: noteColumn,
+                    isSustainNote: true,
+                    noteSkin: PlayState.SONG.options.arrowSkin,
+                    prevNote: oldNote,
+                    createdFrom: this,
+                    scrollSpeed: scrollSpeed,
+                    parentStrumline: this,
+                    inEditor: false
+                  });
+                var isPixelNoteSus:Bool = (sustainNote.texture.contains('pixel')
+                  || sustainNote.noteSkin.contains('pixel')
+                  || oldNote.texture.contains('pixel')
+                  || oldNote.noteSkin.contains('pixel'));
+                sustainNote.clipToStrum = swagNote.clipToStrum;
+                sustainNote.realNoteData = swagNote.realNoteData;
+                sustainNote.setupNote(swagNote.strumLineID, swagNote.actualStrumLineID, swagNote.noteSection, swagNote.noteType);
+                sustainNote.animSuffix = swagNote.animSuffix;
+                if (sustainNote.noteType != 'GF Sing') sustainNote.gfNote = swagNote.gfNote;
+                sustainNote.dType = swagNote.dType;
+                sustainNote.containsPixelTexture = isPixelNoteSus;
+                if (pushNotes) sustainNote.parent = swagNote;
+                sustainNote.scrollFactor.set();
+                sustainNote.bpm = swagNote.bpm;
+                if (pushNotes)
+                {
+                  unspawnNotes.push(sustainNote);
+                  swagNote.tail.push(sustainNote);
+                }
+
+                // After everything loads
+                var isNotePixel:Bool = isPixelNoteSus;
+                oldNote.containsPixelTexture = isNotePixel;
+                sustainNote.correctionOffset = swagNote.height / 2;
+                if (!isNotePixel)
+                {
+                  if (oldNote.isSustainNote)
+                  {
+                    oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight;
+                    oldNote.scale.y /= playbackSpeed;
+                    oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
+                  }
+
+                  if (ClientPrefs.data.downScroll) sustainNote.correctionOffset = 0;
+                }
+                else if (oldNote.isSustainNote)
+                {
+                  oldNote.scale.y /= playbackSpeed;
+                  oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
+                }
+
+                if (characterStrumlineType == BF) sustainNote.x += FlxG.width / 2; // general offset
+                else if (ClientPrefs.data.middleScroll)
+                {
+                  sustainNote.x += 310;
+                  if (noteColumn > 1) // Up and Right
+                    sustainNote.x += FlxG.width / 2 + 25;
+                }
+              }
+            }
+
+            if (characterStrumlineType == BF) swagNote.x += FlxG.width / 2; // general offset
+            else if (ClientPrefs.data.middleScroll)
+            {
+              swagNote.x += 310;
+              if (noteColumn > 1) // Up and Right
+                swagNote.x += FlxG.width / 2 + 25;
+            }
+            oldNote = swagNote;
+          }
+        }
+        daSection += 1;
+      }
+      return unspawnNotes;
+    }
+
+    charactersDance = function() {
+    }
+
+    final splash:NoteSplash = new NoteSplash(characterStrumLineType == DAD);
+    noteSplashes.add(splash);
+    splash.alpha = 0.000001; // cant make it invisible or it won't allow precaching
+    super(0);
   }
+
+  public dynamic function charactersDance() {}
+
+  public dynamic function handleHitNotes()
+  {
+    notes.forEachAlive(function(daNote:Note) {
+      if (characterStrumlineType == BF)
+      {
+        daNote.canBeHit = (daNote.strumTime > Conductor.songPosition - (Conductor.safeZoneOffset * daNote.lateHitMult)
+          && daNote.strumTime < Conductor.songPosition + (Conductor.safeZoneOffset * daNote.earlyHitMult));
+
+        if (daNote.strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !daNote.wasGoodHit) daNote.tooLate = true;
+      }
+      else
+      {
+        daNote.canBeHit = false;
+
+        if (!daNote.wasGoodHit && daNote.strumTime <= Conductor.songPosition)
+        {
+          if (!daNote.isSustainNote || (daNote.prevNote.wasGoodHit && !daNote.ignoreNote)) daNote.wasGoodHit = true;
+        }
+      }
+    });
+  }
+
+  public function copyNotes():Array<Note>
+    return loadedNotes.members = unspawnNotes.members.copy();
 
   public var guitarHeroSustains:Bool = ClientPrefs.data.newSustainBehavior;
-
-  public dynamic function updateHolds(elapsed:Float)
-  {
-    if (holdCovers != null) holdCovers.update(elapsed);
-  }
 
   public dynamic function setHoldCoverParents(amount:Int)
   {
@@ -301,39 +535,120 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
   {
     if (data == null) return;
     final targetNote:Note = data.targetNote;
-    final dataIndex:Int = data.targetNote != null ? data.targetNote.noteData : data.currentDataIndex;
-    final mustPress:Bool = (targetNote != null && targetNote.mustPress) ? true : data.isPlayer;
-    final splash:NoteSplash = new NoteSplash(!mustPress);
-    splash.babyArrow = members[dataIndex];
+    final dataIndex:Int = targetNote != null ? targetNote.noteData : data.currentDataIndex;
+    final mustPress:Bool = (characterStrumlineType != null && characterStrumlineType == BF) ? true : data.isPlayer;
+    final strum:StrumArrow = members[dataIndex % members.length];
+    final splash:NoteSplash = noteSplashes.recycle(NoteSplash);
+    splash.opponentSplashes = !mustPress;
+    splash.babyArrow = strum;
     if (targetNote != null) splash.spawnSplashNote(targetNote);
     else
-      splash.spawnSplashNote(targetNote, dataIndex);
+      splash.spawnSplashNote(strum.x, strum.y, targetNote, dataIndex);
     if (ClientPrefs.data.splashAlphaAsStrumAlpha) splash.alpha = members[dataIndex].alpha;
     noteSplashes.add(splash);
   }
 
   public dynamic function missHoldCover(key:Int, ?note:Note)
-  {
     if (holdCovers != null) holdCovers.despawnOnMiss(key, note);
-  }
 
   public dynamic function spawnHoldCover(note:Note)
-  {
     if (holdCovers != null) holdCovers.spawnOnNoteHit(note);
+
+  public dynamic function registerUnspawnedNotes()
+  {
+    if (!unspawnNotes.isFirstValid()) return;
+    while (unspawnNotes.validTime(playbackSpeed))
+    {
+      final dunceNote:Note = unspawnNotes.byIndex(0);
+      notes.insert(0, dunceNote);
+      dunceNote.spawned = true;
+
+      calls.onSpawnNoteLua(notes, dunceNote);
+      calls.onSpawnNoteHx(dunceNote);
+
+      unspawnNotes.spliceIndexOf(dunceNote, 1);
+
+      calls.onSpawnNoteLuaPost(notes, dunceNote);
+      calls.onSpawnNoteHxPost(dunceNote);
+    }
   }
 
-  public dynamic function registerUnspawnedNotes() {}
+  public dynamic function updateNote(daNote:Note)
+  {
+    final strum:StrumArrow = members[daNote.noteData % members.length];
+    if (daNote.allowStrumFollow) daNote.followStrumArrow(strum, playbackSpeed);
 
-  public dynamic function updateNotes(daNote:Note) {}
+    calls.onIsPixel(daNote);
+    calls.onHit(daNote);
 
-  public dynamic function createNotes():Array<Note>
+    if (daNote.allowNoteToHit && daNote.isSustainNote && strum.sustainReduce) daNote.clipToStrumArrow(strum);
+    // Kill extremely late notes and cause misses
+
+    if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
+    {
+      if (ClientPrefs.data.vanillaStrumAnimations)
+      {
+        if ((daNote.isSustainNote && daNote.isHoldEnd)
+          || (!daNote.isSustainNote && characterStrumlineType == DAD)) strum.playAnim('static', true);
+      }
+
+      calls.onMissed(daNote);
+      if (daNote.allowDeleteAndMiss) invalidateNote(daNote, false);
+    }
+  }
+
+  public dynamic function updateNotes(ready:Bool = false)
+  {
+    if (!ready)
+    {
+      notes.forEachAlive(function(daNote:Note) calls.onNotReady(daNote));
+      return;
+    }
+    notes.forEachAlive(function(daNote:Note) {
+      updateNote(daNote);
+    });
+  }
+
+  public dynamic function createNotes(sectionsData:Array<SwagSection>, allowedSections:Array<Int> = null, limit:Float = 0,
+      limitAllowed:Bool = false):Array<Note>
     return [];
 
-  public dynamic function generateStrums(xPos:Array<Float>, yPos:Array<Float>, player:Int, style:String, amount:Int)
+  public dynamic function setStrumStyle(style:String, ?index:Int = -1)
   {
-    if (xPos.length <= amount || yPos.length <= amount) return;
-    for (i in 0...amount)
-      add(createStrum(xPos[i], yPos[i], player, style, i));
+    if (index < 0)
+    {
+      for (i in 0...index)
+      {
+        members[i].reloadNote(style);
+        reloadPixel(members[i], style);
+      }
+    }
+    else
+    {
+      members[index].reloadNote(style);
+      reloadPixel(members[index], style);
+    }
+  }
+
+  public dynamic function generateStrums(player:Int, style:String, amount:Int, ?xPos:Array<Float> = null, ?yPos:Array<Float> = null,)
+  {
+    if (xPos != null && xPos.length != amount || yPos != null && yPos.length != amount) return;
+    if (xPos == null)
+    {
+      xPos = [];
+      final TRUE_STRUM_X:Float = style.contains('pixel') ? initialStrumLinePos.x + (ClientPrefs.data.middleScroll ? 3 : 2) : initialStrumLinePos.x;
+      for (posAmount in 0...amount)
+        xPos.push(TRUE_STRUM_X);
+    }
+    if (yPos == null)
+    {
+      yPos = [];
+      for (posAmount in 0...amount)
+        yPos.push(initialStrumLinePos.y);
+    }
+
+    for (strumIndex in 0...amount)
+      add(createStrum(xPos[strumIndex], yPos[strumIndex], player, style, strumIndex));
   }
 
   public dynamic function createStrum(xPos:Float, yPos:Float, player:Int, style:String, i:Int):StrumArrow
@@ -344,24 +659,13 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     babyArrow.reloadNote(style);
     reloadPixel(babyArrow, style);
 
-    if (PlayState.SONG != null && !PlayState.SONG.options.notITG)
-    {
-      babyArrow.loadLane();
-      babyArrow.bgLane.updateHitbox();
-      babyArrow.bgLane.scrollFactor.set();
-    }
-    #if SCEModchartingTools
-    else
-      babyArrow.loadLineSegment();
-    #end
+    if (player == 0) babyArrow.middlePosition();
+    babyArrow.playerPosition();
     return babyArrow;
   }
 
-  public dynamic function reloadPixel(babyArrow:StrumArrow, style:String)
-  {
-    final isPixel:Bool = (style.contains('pixel') || babyArrow.daStyle.contains('pixel') || babyArrow.texture.contains('pixel'));
-    babyArrow.containsPixelTexture = isPixel;
-  }
+  public dynamic function reloadPixel(babyArrow:StrumArrow, style:String):Bool
+    return babyArrow.containsPixelTexture = (style.contains('pixel') || babyArrow.daStyle.contains('pixel') || babyArrow.texture.contains('pixel'));
 
   override public function kill()
   {
@@ -385,6 +689,32 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     calls.clearFunctions();
   }
 
+  public function onKeyPress(event:KeyboardEvent):Void
+  {
+    final eventKey:FlxKey = event.keyCode;
+    final key:Int = PlayState.getKeyFromEvent(keysArray, eventKey);
+    if (controls.controllerMode || key <= -1) return;
+    #if debug
+    // Prevents crash specifically on debug without needing to try catch shit
+    @:privateAccess if (!FlxG.keys._keyListMap.exists(eventKey)) return;
+    #end
+    if (!FlxG.keys.checkStatus(eventKey, JUST_PRESSED)) return;
+    updatePressedKeys(key);
+    calls.onKeyPressEvent(key);
+  }
+
+  public function onKeyRelease(event:KeyboardEvent):Void
+  {
+    final eventKey:FlxKey = event.keyCode;
+    final key:Int = PlayState.getKeyFromEvent(keysArray, eventKey);
+    if (controls.controllerMode || key <= -1) return;
+    updateReleasedKeys(key);
+    calls.onKeyReleaseEvent(key);
+  }
+
+  public dynamic function canKeyActionUpdate():Bool
+    return true;
+
   public dynamic function sortHitNotes(a:Note, b:Note):Int
   {
     if (a.lowPriority && !b.lowPriority) return 1;
@@ -392,20 +722,25 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     return FlxSort.byValues(FlxSort.ASCENDING, a.strumTime, b.strumTime);
   }
 
-  var _updatedPosition:Float = 0;
+  public var _updatedPosition:Float = 0;
+  public var playKeys:Bool = false;
 
   public dynamic function updatePressedKeys(key:Int, ?reasons:Bool)
   {
+    if (cpuControlled || !playKeys || !canKeyActionUpdate()) return;
+
     final keyBool:Bool = (key > length);
-    if (reasons || cpuControlled || key < 0 || keyBool) return;
-    calls.onKeyPressedPre(key);
+    if (key < 0 || keyBool) return;
+
+    final ret:Dynamic = calls.onKeyPressedPre(key);
+    if (ret == psychlua.LuaUtils.Function_Stop) return;
 
     if (Conductor.songPosition >= 0 && _updatedPosition <= 0) _updatedPosition = Conductor.songPosition;
     final _updatedLastPosition:Float = _updatedPosition;
     if (_updatedPosition >= 0) _updatedPosition = FlxG.sound.music.time + Conductor.offset;
 
     final plrInputNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
-      final canHit:Bool = n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.allowNotesToHit && !n.tooLate && !n.wasGoodHit && !n.blockHit;
+      final canHit:Bool = n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.allowNoteToHit && !n.tooLate && !n.wasGoodHit && !n.blockHit;
       return canHit && !n.isSustainNote && n.noteData == key;
     });
     plrInputNotes.sort(sortHitNotes);
@@ -430,7 +765,7 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
           }
         }
       }
-      calls.onPlayerNoteHit(funnyNote);
+      calls.onNoteKeyHit(funnyNote);
     }
     else
     {
@@ -446,50 +781,42 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
 
   public dynamic function updateReleasedKeys(key:Int, ?reasons:Bool)
   {
-    final keyBool:Bool = (key > length);
-    if (reasons || cpuControlled || key < 0 || keyBool) return;
+    if (cpuControlled || !playKeys || !canKeyActionUpdate()) return;
 
-    calls.onKeyReleasedPre(key);
+    final keyBool:Bool = (key > length);
+    if (key < 0 || keyBool) return;
+
+    final ret:Dynamic = calls.onKeyReleasedPre(key);
+    if (ret == psychlua.LuaUtils.Function_Stop) return;
 
     playStatic(key);
 
     calls.onKeyReleased(key);
 
     if (holdCovers != null
-      && holdCovers.members[key].isAnimationNull()
-      && !members[key].getLastAnimationPlayed().endsWith('p')) missHoldCover(key);
+      && holdCovers.members[key % holdCovers.members.length].isAnimationNull()
+      && !members[key % members.length].getLastAnimationPlayed().endsWith('p')) missHoldCover(key);
   }
 
-  public dynamic function playConfirm(key:Int, time:Float, isSus:Bool = false)
+  public dynamic function playConfirm(key:Int, time:Float = -1, isSus:Bool = false)
   {
-    final spr:StrumArrow = members[key];
-    if (spr != null)
+    final spr:StrumArrow = members[key % members.length];
+    if (spr == null) return;
+    if (ClientPrefs.data.vanillaStrumAnimations)
     {
-      if (ClientPrefs.data.vanillaStrumAnimations)
-      {
-        if (isSus)
-        {
-          if (spr.animation.getByName('confirm-hold') != null) spr.holdConfirm();
-        }
-        else
-        {
-          if (spr.animation.getByName('confirm') != null) spr.playAnim('confirm', true);
-        }
-      }
-      else
-      {
-        if (spr.animation.getByName('confirm') != null)
-        {
-          spr.playAnim('confirm', true);
-          spr.resetAnim = time;
-        }
-      }
+      if (isSus && spr.animation.getByName('confirm-hold') != null) spr.holdConfirm();
+      else if (spr.animation.getByName('confirm') != null) spr.playAnim('confirm', true);
+    }
+    else if (spr.animation.getByName('confirm') != null)
+    {
+      spr.playAnim('confirm', true);
+      if (time != -1) spr.resetAnim = time;
     }
   }
 
   public dynamic function playStatic(key:Int)
   {
-    final spr:StrumArrow = members[key];
+    final spr:StrumArrow = members[key % members.length];
     if (spr != null && spr.animation.getByName('static') != null)
     {
       spr.playAnim('static', true);
@@ -499,7 +826,7 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
 
   public dynamic function playPressed(key:Int)
   {
-    final spr:StrumArrow = members[key];
+    final spr:StrumArrow = members[key % members.length];
     if (spr != null
       && spr.animation.curAnim.name != 'confirm'
       && spr.animation.curAnim.name != 'confirm-hold'
@@ -512,8 +839,13 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
 
   public var keysArray:Array<String> = ['note_left', 'note_down', 'note_up', 'note_right'];
 
-  public dynamic function updateKeys(reasons:Bool)
+  public dynamic function canHoldKey():Bool
+    return true;
+
+  public dynamic function updateKeys()
   {
+    if (cpuControlled || !playKeys) return;
+
     // HOLDING
     var holdArray:Array<Bool> = [];
     var pressArray:Array<Bool> = [];
@@ -529,12 +861,12 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     if (controls.controllerMode && pressArray.contains(true)) for (i in 0...pressArray.length)
       if (pressArray[i] && strumsBlocked[i] != true) updatePressedKeys(i);
 
-    if (reasons)
+    if (canHoldKey())
     {
       // rewritten inputs???
       for (n in notes)
       { // I can't do a filter here, that's kinda awesome
-        var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.allowNotesToHit && !n.tooLate && !n.wasGoodHit && !n.blockHit);
+        var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.allowNoteToHit && !n.tooLate && !n.wasGoodHit && !n.blockHit);
 
         if (guitarHeroSustains) canHit = canHit && n.parent != null && n.parent.wasGoodHit;
 
@@ -542,11 +874,11 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
         {
           var released:Bool = !holdArray[n.noteData];
 
-          if (!released) calls.onPlayerNoteHit(n);
+          if (!released) calls.onNoteKeyHit(n);
         }
       }
 
-      if (!holdArray.contains(true) || (PlayState.instance != null && PlayState.instance.endingSong)) calls.onNotHoldingKey();
+      if (!holdArray.contains(true)) calls.onNotHoldingKey();
       else
         calls.onHoldingKey();
     }
@@ -556,145 +888,122 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
       if (releaseArray[i] || strumsBlocked[i] == true) updateReleasedKeys(i);
   }
 
-  public dynamic function invalidateNote(note:Note, unspawnedNotes:Bool):Void {}
+  public dynamic function invalidateNote(note:Note, unspawnedNotes:Bool):Void
+  {
+    if (note == null) return;
+    note.invalidate();
+    if (!unspawnedNotes) notes.remove(note, true);
+    else
+      unspawnNotes.remove(note);
+  }
 }
 
 class StrumLineCalls
 {
   // Note Direct Calls / Spawn Note Calls
   public var noteIsPixel:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onIsPixel(note:Note) {}
+  public var onIsPixel:Note->Void = null;
 
   public var noteHit:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onHit(note:Note) {}
+  public var onHit:Note->Void = null;
 
   public var noteMissed:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onMissed(daNote:Note) {}
+  public var onMissed:Note->Void = null;
 
   public var noteNotReady:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onNotReady(daNote:Note) {}
+  public var onNotReady:Note->Void = null;
 
   public var noteDeleted:FlxTypedSignal<(Note, Bool) -> Void> = new FlxTypedSignal<(Note, Bool) -> Void>();
-
-  public dynamic function onDeleted(note:Note, unspawn:Bool) {}
+  public var onDeleted:(Note, Bool) -> Void = null;
 
   public var clearNotesBefore:FlxTypedSignal<(Float, Bool) -> Void> = new FlxTypedSignal<(Float, Bool) -> Void>();
-
-  public dynamic function onClearNotesBefore(time:Float, completelyClear:Bool) {}
+  public var onClearNotesBefore:(Float, Bool) -> Void = null;
 
   public var clearNotesAfter:FlxTypedSignal<Float->Void> = new FlxTypedSignal<Float->Void>();
-
-  public dynamic function onClearNotesAfter(time:Float) {}
+  public var onClearNotesAfter:Float->Void = null;
 
   public var spawnNoteLua:FlxTypedSignal<(notes:FlxTypedGroup<Note>,
       dunceNote:Note) -> Void> = new FlxTypedSignal<(notes:FlxTypedGroup<Note>, dunceNote:Note) -> Void>();
-
-  public dynamic function onSpawnNoteLua(notes:FlxTypedGroup<Note>, dunceNote:Note) {}
+  public var onSpawnNoteLua:(FlxTypedGroup<Note>, Note) -> Void = null;
 
   public var spawnNoteHx:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onSpawnNoteHx(dunceNote:Note) {}
+  public var onSpawnNoteHx:Note->Void = null;
 
   public var spawnNoteLuaPost:FlxTypedSignal<(notes:FlxTypedGroup<Note>,
       dunceNote:Note) -> Void> = new FlxTypedSignal<(notes:FlxTypedGroup<Note>, dunceNote:Note) -> Void>();
-
-  public dynamic function onSpawnNoteLuaPost(notes:FlxTypedGroup<Note>, dunceNote:Note) {}
+  public var onSpawnNoteLuaPost:(FlxTypedGroup<Note>, Note) -> Void = null;
 
   public var spawnNoteHxPost:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onSpawnNoteHxPost(dunceNote:Note) {}
+  public var onSpawnNoteHxPost:Note->Void = null;
 
   // Input Calls
   public var keyPressedPre:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
-
-  public dynamic function onKeyPressedPre(key:Int) {}
+  public var onKeyPressedPre:Int->Dynamic = null;
 
   public var keyPressed:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
-
-  public dynamic function onKeyPressed(key:Int) {}
+  public var onKeyPressed:Int->Void = null;
 
   public var keyReleasedPre:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
-
-  public dynamic function onKeyReleasedPre(key:Int) {}
+  public var onKeyReleasedPre:Int->Dynamic = null;
 
   public var keyReleased:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
-
-  public dynamic function onKeyReleased(key:Int) {}
+  public var onKeyReleased:Int->Void = null;
 
   public var ghostTap:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
-
-  public dynamic function onGhostTap(key:Int) {}
+  public var onGhostTap:Int->Void = null;
 
   public var noteMissPress:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
-
-  public dynamic function onMissPress(key:Int) {}
+  public var onMissPress:Int->Void = null;
 
   // StrumLine PlayState Calls
-  public var playerNoteHit:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onPlayerNoteHit(note:Note) {}
-
-  public var cpuNoteHit:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
-
-  public dynamic function onCpuNoteHit(note:Note) {}
+  public var noteKeyHit:FlxTypedSignal<Note->Void> = new FlxTypedSignal<Note->Void>();
+  public var onNoteKeyHit:Note->Void = null;
 
   public var notHoldingKey:FlxSignal;
-
-  public dynamic function onNotHoldingKey() {}
+  public var onNotHoldingKey:Void->Void = null;
 
   public var holdingKey:FlxSignal;
-
-  public dynamic function onHoldingKey() {}
+  public var onHoldingKey:Void->Void = null;
 
   // Actual Interally Use StrumLine Calls
   public var draw:FlxSignal;
-
-  public dynamic function onDraw() {}
+  public var onDraw:Void->Void = null;
 
   public var drawPost:FlxSignal;
-
-  public dynamic function onDrawPost() {}
+  public var onDrawPost:Void->Void = null;
 
   public var update:FlxSignal;
-
-  public dynamic function onUpdate(elapsed:Float) {}
+  public var onUpdate:Float->Void;
 
   public var updatePost:FlxSignal;
-
-  public dynamic function onUpdatePost(elapsed:Float) {}
+  public var onUpdatePost:Float->Void;
 
   public var revive:FlxSignal;
-
-  public dynamic function onRevive() {}
+  public var onRevive:Void->Void = null;
 
   public var revivePost:FlxSignal;
-
-  public dynamic function onRevivePost() {}
+  public var onRevivePost:Void->Void = null;
 
   public var kill:FlxSignal;
-
-  public dynamic function onKill() {}
+  public var onKill:Void->Void = null;
 
   public var killPost:FlxSignal;
-
-  public dynamic function onKillPost() {}
+  public var onKillPost:Void->Void = null;
 
   public var destroy:FlxSignal;
-
-  public dynamic function onDestroy() {}
+  public var onDestroy:Void->Void = null;
 
   public var destroyPost:FlxSignal;
+  public var onDestroyPost:Void->Void = null;
 
-  public dynamic function onDestroyPost() {}
+  public var keyPressEvent:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
+  public var onKeyPressEvent:Int->Void;
+
+  public var keyReleaseEvent:FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
+  public var onKeyReleaseEvent:Int->Void;
 
   public function new()
-  {
     clearFunctions(); // Functions need to be activated first.
-  }
 
   public function clearFunctions()
   {
@@ -720,17 +1029,21 @@ class StrumLineCalls
     }
     onSpawnNoteHxPost = function(note) {
     }
-    onKeyPressedPre = function(key) {
+    onKeyPressedPre = function(key):Dynamic {
+      return null;
     }
     onKeyPressed = function(key) {
     }
-    onKeyReleasedPre = function(key) {
+    onKeyReleasedPre = function(key):Dynamic {
+      return null;
     }
     onKeyReleased = function(key) {
     }
     onGhostTap = function(key) {
     }
     onMissPress = function(key) {
+    }
+    onNoteKeyHit = function(note) {
     }
     onNotHoldingKey = function() {
     }
@@ -755,6 +1068,10 @@ class StrumLineCalls
     onDestroy = function() {
     }
     onDestroyPost = function() {
+    }
+    onKeyReleaseEvent = function(key) {
+    }
+    onKeyPressEvent = function(key) {
     }
   }
 }

@@ -50,25 +50,23 @@ class NoteTimer extends FlxTypedSpriteGroup<FlxSprite>
       var show:Bool = false;
       if (Conductor.songPosition > 0)
       {
-        for (daNote in instance.notes)
-          if (daNote.mustPress) // check notes for closest
-          {
-            final timeDiff = daNote.strumTime - Conductor.songPosition;
-            if (timeDiff < timeTillNextNote) timeTillNextNote = timeDiff;
-          }
+        for (daNote in instance.playerStrums.notes) // check notes for closest
+        {
+          final timeDiff = daNote.strumTime - Conductor.songPosition;
+          if (timeDiff < timeTillNextNote) timeTillNextNote = timeDiff;
+        }
 
         if (timeTillNextNote == FlxMath.MAX_VALUE_FLOAT) // now check unspawnNotes if not found anything
         {
-          for (daNote in instance.unspawnNotes.members)
-            if (daNote.mustPress)
+          for (daNote in instance.playerStrums.unspawnNotes.members)
+          {
+            final timeDiff = daNote.strumTime - Conductor.songPosition;
+            if (timeDiff < timeTillNextNote)
             {
-              final timeDiff = daNote.strumTime - Conductor.songPosition;
-              if (timeDiff < timeTillNextNote)
-              {
-                timeTillNextNote = timeDiff;
-                break;
-              }
+              timeTillNextNote = timeDiff;
+              break;
             }
+          }
         }
         show = timeTillNextNote != FlxMath.MAX_VALUE_FLOAT; // if found a note and time is larger than 2 secs
       }

@@ -10,7 +10,7 @@ class BarHit extends FlxSpriteGroup
   public var valueFunction:Void->Float = null;
   public var percent(default, set):Float = 0;
   public var bounds:Dynamic = {min: 0, max: 1};
-  public var leftToRight(default, set):Bool = true;
+  public var leftToRight(default, set):Bool = false;
   public var barCenter(default, null):Float = 0;
 
   // you might need to change this if you want to use a custom bar

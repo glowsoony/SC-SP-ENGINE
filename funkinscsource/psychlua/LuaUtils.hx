@@ -842,8 +842,8 @@ class LuaUtils
         {
           case 'camgame' | 'game':
             return PlayState.instance.camGame;
-          case 'camhud2' | 'hud2':
-            return PlayState.instance.camHUD2;
+          case 'camunderui' | 'underui':
+            return PlayState.instance.camUnderUI;
           case 'camhud' | 'hud':
             return PlayState.instance.camHUD;
           case 'camother' | 'other':
@@ -871,8 +871,8 @@ class LuaUtils
     {
       case 'camgame' | 'game':
         camera = 'camGame';
-      case 'camhud2' | 'hud2':
-        camera = 'camHUD2';
+      case 'camunderui' | 'underui':
+        camera = 'camUnderUI';
       case 'camhud' | 'hud':
         camera = 'camHUD';
       case 'camother' | 'other':
@@ -1076,6 +1076,10 @@ class LuaUtils
       animationFrame = PlayState.instance.boyfriend.animation.curAnim.curFrame;
     }
 
+    var oldTimer:Float->Void = null;
+    oldTimer = PlayState.instance.boyfriend.updateHoldTimer;
+
+    PlayState.instance.playerStrums.characters.remove(PlayState.instance.boyfriend);
     PlayState.instance.boyfriend.resetAnimationVars();
 
     PlayState.instance.removeObject(PlayState.instance.boyfriend);
@@ -1124,15 +1128,16 @@ class LuaUtils
 
     PlayState.instance.addObject(PlayState.instance.boyfriend);
 
-    PlayState.instance.iconP1.changeIcon(PlayState.instance.boyfriend.healthIcon);
-
-    PlayState.instance.reloadColors();
+    PlayState.instance.hud.iconP1.changeIcon(PlayState.instance.boyfriend.healthIcon);
+    PlayState.instance.hud.reloadColors();
 
     if (PlayState.instance.boyfriend.playAnimationBeforeSwitch)
     {
       if (PlayState.instance.boyfriend.hasOffsetAnimation(animationName)) PlayState.instance.boyfriend.playAnim(animationName, true, false, animationFrame);
     }
 
+    PlayState.instance.boyfriend.updateHoldTimer = oldTimer;
+    PlayState.instance.playerStrums.characters.push(PlayState.instance.boyfriend);
     PlayState.instance.setOnScripts('boyfriendName', PlayState.instance.boyfriend.curCharacter);
     PlayState.instance.boyfriend.loadCharacterScript(PlayState.instance.boyfriend.curCharacter);
   }
@@ -1149,6 +1154,10 @@ class LuaUtils
       animationFrame = PlayState.instance.dad.animation.curAnim.curFrame;
     }
 
+    var oldTimer:Float->Void = null;
+    oldTimer = PlayState.instance.dad.updateHoldTimer;
+
+    PlayState.instance.opponentStrums.characters.remove(PlayState.instance.dad);
     PlayState.instance.remove(PlayState.instance.dad);
     PlayState.instance.dad.destroy();
     PlayState.instance.dad = new Character(0, 0, id, flipped, 'DAD');
@@ -1195,15 +1204,16 @@ class LuaUtils
 
     PlayState.instance.add(PlayState.instance.dad);
 
-    PlayState.instance.iconP2.changeIcon(PlayState.instance.dad.healthIcon);
-
-    PlayState.instance.reloadColors();
+    PlayState.instance.hud.iconP2.changeIcon(PlayState.instance.dad.healthIcon);
+    PlayState.instance.hud.reloadColors();
 
     if (PlayState.instance.dad.playAnimationBeforeSwitch)
     {
       if (PlayState.instance.dad.hasOffsetAnimation(animationName)) PlayState.instance.dad.playAnim(animationName, true, false, animationFrame);
     }
 
+    PlayState.instance.dad.updateHoldTimer = oldTimer;
+    PlayState.instance.opponentStrums.characters.push(PlayState.instance.dad);
     PlayState.instance.setOnScripts('dadName', PlayState.instance.dad.curCharacter);
     PlayState.instance.dad.loadCharacterScript(PlayState.instance.dad.curCharacter);
   }
@@ -1295,8 +1305,8 @@ class LuaUtils
 
     switch (id.toLowerCase())
     {
-      case 'camhud2' | 'hud2':
-        return FunkinLua.lua_Cameras.get("hud2");
+      case 'camunderui' | 'underui':
+        return FunkinLua.lua_Cameras.get("underui");
       case 'camhud' | 'hud':
         return FunkinLua.lua_Cameras.get("hud");
       case 'camother' | 'other':
@@ -1366,10 +1376,6 @@ class LuaUtils
     if (MusicBeatState.variableMap(id).exists(id)) return MusicBeatState.variableMap(id).get(id);
 
     if (Std.parseInt(id) == null) return Reflect.getProperty(getTargetInstance(), id);
-    else if (getTargetInstance() == PlayState.instance)
-    {
-      return PlayState.instance.strumLineNotes.members[Std.parseInt(id)];
-    }
     return "No such item!";
   }
 

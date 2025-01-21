@@ -12,22 +12,10 @@ import openfl.Assets;
 import openfl.display.TriangleCulling;
 import openfl.geom.Vector3D;
 import openfl.geom.ColorTransform;
-#if SCEModchartingTools
-import modcharting.NotePositionData;
-#end
 import lime.math.Vector2;
 
-class StrumArrow extends ModchartArrow
+class StrumArrow extends FunkinSCSprite
 {
-  // Galxay stuff
-  private static var alphas:Map<String, Map<Int, Map<String, Map<Int, Array<Float>>>>> = new Map();
-  private static var indexes:Map<String, Map<Int, Map<String, Map<Int, Array<Int>>>>> = new Map();
-  private static var glist:Array<FlxGraphic> = [];
-
-  public var gpix:FlxGraphic = null;
-  public var oalp:Float = 1;
-  public var oanim:String = "";
-
   public var rgbShader:RGBShaderReference;
   public var noteData:Int = 0;
   public var direction(default, set):Float;
@@ -40,8 +28,6 @@ class StrumArrow extends ModchartArrow
   public var changedSkin:Bool = false;
 
   public var laneFollowsReceptor:Bool = true;
-
-  public var bgLane:FlxSkewed;
 
   private var _dirSin:Float;
   private var _dirCos:Float;
@@ -73,11 +59,6 @@ class StrumArrow extends ModchartArrow
   public static var notITGStrums:Bool = false;
 
   public var resetAnim:Float = 0;
-
-  #if SCEModchartingTools
-  public var strumPositionData:NotePositionData = NotePositionData.get();
-  public var lineSegment:ArrowPathSegment;
-  #end
 
   public var strumType(default, set):String = null;
 
@@ -148,12 +129,16 @@ class StrumArrow extends ModchartArrow
     playAnim('static');
   }
 
-  #if SCEModchartingTools
-  public dynamic function loadLineSegment()
+  public function middlePosition()
   {
-    lineSegment = new ArrowPathSegment(this, Std.int(Note.swagWidth) - 80, 2160);
+    if (ClientPrefs.data.middleScroll)
+    {
+      x += 310;
+
+      // Up and Right
+      if (noteData > 1) x += FlxG.width / 2 + 20;
+    }
   }
-  #end
 
   var confirmHoldTimer:Float = -1;
 
@@ -165,8 +150,9 @@ class StrumArrow extends ModchartArrow
     if (animation.curAnim != null) lastAnim = animation.curAnim.name;
     if (PlayState.instance != null)
     {
-      PlayState.instance.bfStrumStyle = style;
-      PlayState.instance.dadStrumStyle = style;
+      if (player > 0) PlayState.instance.bfStrumStyle = style;
+      else
+        PlayState.instance.dadStrumStyle = style;
     }
 
     loadNoteAnims(style);
@@ -271,8 +257,7 @@ class StrumArrow extends ModchartArrow
   {
     var notesAnim:Array<String> = customColoredNotes ? ['UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP'] : ['LEFT', 'DOWN', 'UP', 'RIGHT'];
     var pressAnim:Array<String> = customColoredNotes ? ['up', 'up', 'up', 'up', 'up', 'up', 'up', 'up'] : ['left', 'down', 'up', 'right'];
-    var colorAnims:Array<String> = customColoredNotes ? ['green', 'green', 'green', 'green', 'green', 'green', 'green',
-      'green'] : ['purple', 'blue', 'green', 'red'];
+    var colorAnims:Array<String> = customColoredNotes ? ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green'] : ['purple', 'blue', 'green', 'red'];
 
     if (pixel)
     {
@@ -303,19 +288,6 @@ class StrumArrow extends ModchartArrow
       animation.addByPrefix('confirm', pressAnim[noteData] + ' confirm', 24, false);
       animation.addByPrefix('confirm-hold', pressAnim[noteData] + ' confirm', 24, false);
     }
-  }
-
-  public dynamic function loadLane()
-  {
-    bgLane = new FlxSkewed();
-    bgLane.makeGraphic(Std.int(Note.swagWidth), 2160);
-    bgLane.antialiasing = ClientPrefs.data.antialiasing;
-    bgLane.color = FlxColor.BLACK;
-    bgLane.visible = true;
-    bgLane.alpha = ClientPrefs.data.laneTransparency * alpha;
-    bgLane.x = x - 2;
-    bgLane.y += -300;
-    bgLane.updateHitbox();
   }
 
   public dynamic function playerPosition()
@@ -358,21 +330,6 @@ class StrumArrow extends ModchartArrow
 
     if (texture.contains('pixel') || daStyle.contains('pixel')) containsPixelTexture = true;
 
-    if (bgLane != null)
-    {
-      bgLane.angle = direction - 90;
-      if (laneFollowsReceptor) bgLane.x = (x - 2) - (bgLane.angle / 2);
-
-      bgLane.alpha = ClientPrefs.data.laneTransparency * alpha;
-      bgLane.visible = visible;
-    }
-
-    #if SCEModchartingTools
-    if (lineSegment != null && strumPositionData != null)
-    {
-      lineSegment.updateCapture(elapsed);
-    }
-    #end
     super.update(elapsed);
   }
 
@@ -422,158 +379,5 @@ class StrumArrow extends ModchartArrow
       centerOrigin();
     }
     if (useRGBShader) rgbShader.enabled = (animation.curAnim != null && animation.curAnim.name != 'static');
-  }
-
-  @:access(flixel.FlxCamera)
-  override public function draw():Void
-  {
-    if (notITGStrums && drawManual)
-    {
-      if (alpha <= 0 || vertices == null || indices == null || uvtData == null || _point == null || offset == null)
-      {
-        return;
-      }
-
-      for (camera in cameras)
-      {
-        if (!camera.visible || !camera.exists) continue;
-        // if (!isOnScreen(camera)) continue; // TODO: Update this code to make it work properly.
-
-        // memory leak with drawTriangles :c
-
-        getScreenPosition(_point, camera) /*.subtractPoint(offset)*/;
-        var newGraphic:FlxGraphic = mapData();
-
-        /*var shader = this.shader != null ? this.shader : new FlxShader();
-          if (this.shader != shader) this.shader = shader;
-
-          shader.bitmap.input = graphic.bitmap;
-          shader.bitmap.filter = antialiasing ? LINEAR : NEAREST;
-
-          var transforms:Array<ColorTransform> = [];
-          var transfarm:ColorTransform = new ColorTransform();
-          transfarm.redMultiplier = colorTransform.redMultiplier;
-          transfarm.greenMultiplier = colorTransform.greenMultiplier;
-          transfarm.blueMultiplier = colorTransform.blueMultiplier;
-          transfarm.redOffset = colorTransform.redOffset;
-          transfarm.greenOffset = colorTransform.greenOffset;
-          transfarm.blueOffset = colorTransform.blueOffset;
-          transfarm.alphaOffset = colorTransform.alphaOffset;
-          transfarm.alphaMultiplier = colorTransform.alphaMultiplier * camera.alpha;
-
-          for (n in 0...vertices.length)
-            transforms.push(transfarm);
-
-          var drawItem = camera.startTrianglesBatch(newGraphic, antialiasing, true, blend, true, shader);
-
-          @:privateAccess
-          {
-            drawItem.addTrianglesColorArray(vertices, indices, uvtData, null, _point, camera._bounds, transforms);
-        }*/
-
-        camera.drawTriangles(newGraphic, vertices, indices, uvtData, null, _point, blend, true, antialiasing, colorTransform, shader);
-        // camera.drawTriangles(processedGraphic, vertices, indices, uvtData, null, _point, blend, true, antialiasing);
-        // trace("we do be drawin... something?\n verts: \n" + vertices);
-      }
-
-      // trace("we do be drawin tho");
-
-      #if FLX_DEBUG
-      if (FlxG.debugger.drawDebug) drawDebug();
-      #end
-    }
-    else
-    {
-      super.draw();
-    }
-  }
-
-  function mapData():FlxGraphic
-  {
-    if (gpix == null || alpha != oalp || !animation.curAnim.finished || oanim != animation.curAnim.name)
-    {
-      if (!alphas.exists(strumType))
-      {
-        alphas.set(strumType, new Map());
-        indexes.set(strumType, new Map());
-      }
-      if (!alphas.get(strumType).exists(ID))
-      {
-        alphas.get(strumType).set(ID, new Map());
-        indexes.get(strumType).set(ID, new Map());
-      }
-      if (!alphas.get(strumType).get(ID).exists(animation.curAnim.name))
-      {
-        alphas.get(strumType).get(ID).set(animation.curAnim.name, new Map());
-        indexes.get(strumType).get(ID).set(animation.curAnim.name, new Map());
-      }
-      if (!alphas.get(strumType)
-        .get(ID)
-        .get(animation.curAnim.name)
-        .exists(animation.curAnim.curFrame))
-      {
-        alphas.get(strumType)
-          .get(ID)
-          .get(animation.curAnim.name)
-          .set(animation.curAnim.curFrame, []);
-        indexes.get(strumType)
-          .get(ID)
-          .get(animation.curAnim.name)
-          .set(animation.curAnim.curFrame, []);
-      }
-      if (!alphas.get(strumType)
-        .get(ID)
-        .get(animation.curAnim.name)
-        .get(animation.curAnim.curFrame)
-        .contains(alpha))
-      {
-        var pix:FlxGraphic = FlxGraphic.fromFrame(frame, true);
-        var nalp:Array<Float> = alphas.get(strumType)
-          .get(ID)
-          .get(animation.curAnim.name)
-          .get(animation.curAnim.curFrame);
-        var nindex:Array<Int> = indexes.get(strumType)
-          .get(ID)
-          .get(animation.curAnim.name)
-          .get(animation.curAnim.curFrame);
-        pix.bitmap.colorTransform(pix.bitmap.rect, colorTransform);
-        glist.push(pix);
-        nalp.push(alpha);
-        nindex.push(glist.length - 1);
-        alphas.get(strumType)
-          .get(ID)
-          .get(animation.curAnim.name)
-          .set(animation.curAnim.curFrame, nalp);
-        indexes.get(strumType)
-          .get(ID)
-          .get(animation.curAnim.name)
-          .set(animation.curAnim.curFrame, nindex);
-      }
-      var dex = alphas.get(strumType)
-        .get(ID)
-        .get(animation.curAnim.name)
-        .get(animation.curAnim.curFrame)
-        .indexOf(alpha);
-      gpix = glist[indexes.get(strumType)
-        .get(ID)
-        .get(animation.curAnim.name)
-        .get(animation.curAnim.curFrame)[dex]];
-      oalp = alpha;
-      oanim = animation.curAnim.name;
-    }
-    return gpix;
-  }
-
-  override public function destroy():Void
-  {
-    vertices = null;
-    indices = null;
-    uvtData = null;
-    for (i in glist)
-      i.destroy();
-    alphas = new Map();
-    indexes = new Map();
-    glist = [];
-    super.destroy();
   }
 }

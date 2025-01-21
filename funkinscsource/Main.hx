@@ -27,6 +27,26 @@ import gamejolt.GameJoltGroup.GJToastManager;
 import gamejolt.*;
 import states.TitleState;
 
+// NATIVE API STUFF, YOU CAN IGNORE THIS AND SCROLL //
+#if (linux && !debug)
+@:cppInclude('./external/gamemode_client.h')
+@:cppFileCode('#define GAMEMODE_AUTO')
+#end
+#if windows
+@:buildXml('
+<target id="haxe">
+	<lib name="wininet.lib" if="windows" />
+	<lib name="dwmapi.lib" if="windows" />
+</target>
+')
+@:cppFileCode('
+#include <windows.h>
+#include <winuser.h>
+#pragma comment(lib, "Shell32.lib")
+extern "C" HRESULT WINAPI SetCurrentProcessExplicitAppUserModelID(PCWSTR AppID);
+')
+#end
+// // // // // // // // //
 class Main extends Sprite
 {
   public static var focused:Bool = true;
@@ -67,25 +87,27 @@ class Main extends Sprite
   public static var volumeDownKeys:Array<FlxKey> = [FlxKey.NUMPADMINUS, FlxKey.MINUS];
   public static var volumeUpKeys:Array<FlxKey> = [FlxKey.NUMPADPLUS, FlxKey.PLUS];
 
+  var oldVol:Float = 1.0;
+  var newVol:Float = 0.2;
+
+  public static var focusMusicTween:FlxTween;
+
   public function new()
   {
     super();
+
+    #if windows
+    // DPI Scaling fix for windows
+    // this shouldn't be needed for other systems
+    // Credit to YoshiCrafter29 for finding this function
+    untyped __cpp__("SetProcessDPIAware();");
+    #end
 
     #if CRASH_HANDLER
     utils.logging.CrashHandler.initialize();
     utils.logging.CrashHandler.queryStatus();
     #end
 
-    setupGame();
-  }
-
-  var oldVol:Float = 1.0;
-  var newVol:Float = 0.2;
-
-  public static var focusMusicTween:FlxTween;
-
-  private function setupGame():Void
-  {
     final game:FlxGame = new FlxGame(1280, 720, Init, 60, 60, true, false);
     @:privateAccess
     game._customSoundTray = backend.soundtray.FunkinSoundTray;
@@ -148,10 +170,10 @@ class Main extends Sprite
       #end
     });
 
-    #if desktop
-    Application.current.window.onFocusIn.add(onWindowFocusIn);
-    Application.current.window.onFocusOut.add(onWindowFocusOut);
-    #end
+    // #if desktop
+    // Application.current.window.onFocusIn.add(onWindowFocusIn);
+    // Application.current.window.onFocusOut.add(onWindowFocusOut);
+    // #end
 
     // shader coords fix
     FlxG.signals.gameResized.add(function(w, h) {

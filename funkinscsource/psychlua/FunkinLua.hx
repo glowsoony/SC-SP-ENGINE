@@ -85,7 +85,7 @@ class FunkinLua
   #if HSCRIPT_ALLOWED
   public var hscript:HScript = null;
 
-  public function initHaxeModule(code:String = '', ?varsToBring:Dynamic, ?isHxStage:Bool)
+  public function initHaxeModule(code:String = '', ?varsToBring:Dynamic, ?instance:Dynamic = null)
   {
     @:privateAccess {
       if (hscript == null)
@@ -106,7 +106,7 @@ class FunkinLua
         throw e;
       }
       hscript.varsToBring = varsToBring;
-      hscript.isHxStage = isHxStage;
+      if (instance != null) hscript.changeInstance(instance);
     }
   }
   #end
@@ -123,7 +123,7 @@ class FunkinLua
     if (game != null)
     {
       lua_Cameras.set("game", {cam: game.camGame, shaders: [], shaderNames: []});
-      lua_Cameras.set("hud2", {cam: game.camHUD2, shaders: [], shaderNames: []});
+      lua_Cameras.set("underui", {cam: game.camUnderUI, shaders: [], shaderNames: []});
       lua_Cameras.set("hud", {cam: game.camHUD, shaders: [], shaderNames: []});
       lua_Cameras.set("other", {cam: game.camOther, shaders: [], shaderNames: []});
       lua_Cameras.set("notestuff", {cam: game.camNoteStuff, shaders: [], shaderNames: []});
@@ -215,18 +215,18 @@ class FunkinLua
       set('curDecBeat', game.curDecBeat);
       set('curDecStep', game.curDecStep);
 
-      set('score', game.songScore);
-      set('misses', game.songMisses);
-      set('hits', game.songHits);
-      set('combo', game.combo);
-      set('comboOp', game.comboOp);
+      set('score', game.hud.comboStats.songScore);
+      set('misses', game.hud.comboStats.songMisses);
+      set('hits', game.hud.comboStats.songHits);
+      set('combo', game.hud.comboStats.combo);
+      set('comboOp', game.hud.comboStats.comboOp);
       set('deaths', PlayState.deathCounter);
 
-      set('rating', game.ratingPercent);
-      set('ratingName', game.ratingName);
-      set('ratingFC', game.ratingFC);
-      set('totalPlayed', game.totalPlayed);
-      set('totalNotesHit', game.totalNotesHit);
+      set('rating', game.hud.comboStats.ratingPercent);
+      set('ratingName', game.hud.comboStats.ratingName);
+      set('ratingFC', game.hud.comboStats.ratingFC);
+      set('totalPlayed', game.hud.comboStats.totalPlayed);
+      set('totalNotesHit', game.hud.comboStats.totalNotesHit);
 
       set('inGameOver', GameOverSubstate.instance != null);
       set('mustHitSection', curSection != null ? (curSection.mustHitSection == true) : false);
@@ -820,7 +820,8 @@ class FunkinLua
               return -1;
             }
           }
-          return LuaUtils.getTargetInstance().members.indexOf(leObj);
+          final groupOrArray:Dynamic = CustomSubstate.instance != null ? CustomSubstate.instance : LuaUtils.getTargetInstance();
+          return groupOrArray.members.indexOf(leObj);
         }
         luaTrace('getObjectOrder: Object $obj doesn\'t exist!', false, false, FlxColor.RED);
         return -1;
@@ -849,7 +850,7 @@ class FunkinLua
           }
           else
           {
-            var groupOrArray:FlxState = LuaUtils.getTargetInstance();
+            final groupOrArray:Dynamic = CustomSubstate.instance != null ? CustomSubstate.instance : LuaUtils.getTargetInstance();
             groupOrArray.remove(leObj, true);
             groupOrArray.insert(position, leObj);
           }
@@ -1023,39 +1024,39 @@ class FunkinLua
 
       // stupid bietch ass functions
       set("addScore", function(value:Int = 0) {
-        game.songScore += value;
-        game.RecalculateRating();
+        game.hud.comboStats.songScore += value;
+        game.hud.comboStats.onRecalculateRating(false);
         return value;
       });
       set("addMisses", function(value:Int = 0) {
-        game.songMisses += value;
-        game.RecalculateRating();
+        game.hud.comboStats.songMisses += value;
+        game.hud.comboStats.onRecalculateRating(false);
         return value;
       });
       set("addHits", function(value:Int = 0) {
-        game.songHits += value;
-        game.RecalculateRating();
+        game.hud.comboStats.songHits += value;
+        game.hud.comboStats.onRecalculateRating(false);
         return value;
       });
       set("setScore", function(value:Int = 0) {
-        game.songScore = value;
-        game.RecalculateRating();
+        game.hud.comboStats.songScore = value;
+        game.hud.comboStats.onRecalculateRating(false);
         return value;
       });
       set("setMisses", function(value:Int = 0) {
-        game.songMisses = value;
-        game.RecalculateRating();
+        game.hud.comboStats.songMisses = value;
+        game.hud.comboStats.onRecalculateRating(false);
         return value;
       });
       set("setHits", function(value:Int = 0) {
-        game.songHits = value;
-        game.RecalculateRating();
+        game.hud.comboStats.songHits = value;
+        game.hud.comboStats.onRecalculateRating(false);
         return value;
       });
 
-      set("setHealth", function(value:Float = 1) return game.health = value);
-      set("addHealth", function(value:Float = 0) game.health += value);
-      set("getHealth", function() return game.health);
+      set("setHealth", function(value:Float = 1) return game.hud.health = value);
+      set("addHealth", function(value:Float = 0) game.hud.health += value);
+      set("getHealth", function() return game.hud.health);
 
       // Identical functions
       set("FlxColor", function(color:String) return FlxColor.fromString(color));
@@ -1248,18 +1249,18 @@ class FunkinLua
         LuaUtils.cameraFromString(camera).fade(CoolUtil.colorFromString(color), duration, fadeOut, null, forced);
       });
       set("setRatingPercent", function(value:Float) {
-        game.ratingPercent = value;
-        game.setOnScripts('rating', game.ratingPercent);
+        game.hud.comboStats.ratingPercent = value;
+        game.setOnScripts('rating', game.hud.comboStats.ratingPercent);
         return value;
       });
       set("setRatingName", function(value:String) {
-        game.ratingName = value;
-        game.setOnScripts('ratingName', game.ratingName);
+        game.hud.comboStats.ratingName = value;
+        game.setOnScripts('ratingName', game.hud.comboStats.ratingName);
         return value;
       });
       set("setRatingFC", function(value:String) {
-        game.ratingFC = value;
-        game.setOnScripts('ratingFC', game.ratingFC);
+        game.hud.comboStats.ratingFC = value;
+        game.setOnScripts('ratingFC', game.hud.comboStats.ratingFC);
         return value;
       });
       set("getMouseX", function(?camera:String = 'game') {
@@ -1566,18 +1567,15 @@ class FunkinLua
         final right_color:Null<FlxColor> = right != null && right.length > 0 ? CoolUtil.colorFromString(right) : null;
         if (PlayState.SONG.options.oldBarSystem)
         {
-          if (!ClientPrefs.data.gradientSystemForOldBars)
-          {
-            game.healthBar.createFilledBar((game.opponentMode ? right_color : left_color), (game.opponentMode ? left_color : right_color));
-          }
+          if (!ClientPrefs.data.gradientSystemForOldBars) game.hud.healthBar.createFilledBar(left_color, right_color);
           else
-            game.healthBar.createGradientBar([right_color, left_color], [right_color, left_color]);
-          game.healthBar.updateBar();
+            game.hud.healthBar.createGradientBar([right_color, left_color], [right_color, left_color]);
+          game.hud.healthBar.updateBar();
         }
         else
         {
-          game.healthBarNew.setColors(left_color, right_color);
-          game.healthBarHitNew.setColors(left_color, right_color);
+          game.hud.healthBarNew.setColors(left_color, right_color);
+          game.hud.healthBarHitNew.setColors(left_color, right_color);
         }
       });
       set("setTimeBarColors", function(left:String, right:String) {
@@ -1585,20 +1583,20 @@ class FunkinLua
         final right_color:Null<FlxColor> = right != null && right.length > 0 ? CoolUtil.colorFromString(right) : null;
         if (PlayState.SONG.options.oldBarSystem)
         {
-          if (ClientPrefs.data.colorBarType == 'No Colors') game.timeBar.createFilledBar(FlxColor.fromString(Std.string(right)),
+          if (ClientPrefs.data.colorBarType == 'No Colors') game.hud.timeBar.createFilledBar(FlxColor.fromString(Std.string(right)),
             FlxColor.fromString(Std.string(left)));
-          else if (ClientPrefs.data.colorBarType == 'Main Colors') game.timeBar.createGradientBar([FlxColor.BLACK],
+          else if (ClientPrefs.data.colorBarType == 'Main Colors') game.hud.timeBar.createGradientBar([FlxColor.BLACK],
             [FlxColor.fromString(Std.string(right)), FlxColor.fromString(Std.string(left))]);
-          else if (ClientPrefs.data.colorBarType == 'Reversed Colors') game.timeBar.createGradientBar([FlxColor.BLACK],
+          else if (ClientPrefs.data.colorBarType == 'Reversed Colors') game.hud.timeBar.createGradientBar([FlxColor.BLACK],
             [FlxColor.fromString(Std.string(left)), FlxColor.fromString(Std.string(right))]);
-          game.timeBar.updateBar();
+          game.hud.timeBar.updateBar();
         }
         else
-          game.timeBarNew.setColors(left_color, right_color);
+          game.hud.timeBarNew.setColors(left_color, right_color);
       });
 
       set("setPosition", function(obj:String, ?x:Float = null, ?y:Float = null) {
-        final object:FlxSprite = LuaUtils.getObjectLoop(obj);
+        final object:FlxObject = LuaUtils.getObjectLoop(obj);
         if (object != null)
         {
           if (x != null) object.x = x;
@@ -2010,13 +2008,6 @@ class FunkinLua
       #if TRANSLATIONS_ALLOWED Language.addLuaCallbacks(this); #end
       #if VIDEOS_ALLOWED VideoFunctions.implement(this); #end
       #if flxanimate FlxAnimateFunctions.implement(this); #end
-      #if SCEModchartingTools
-      if (game != null
-        && !isStageLua
-        && PlayState.SONG != null
-        && PlayState.SONG.options.notITG
-        && ClientPrefs.getGameplaySetting('modchart')) modcharting.ModchartFuncs.loadLuaFunctions(this);
-      #end
       psychlua.betadciu.SupportBETAFunctions.implement(this);
       ReflectionFunctions.implement(this);
       TextFunctions.implement(this);
@@ -2209,7 +2200,10 @@ class FunkinLua
   {
     if (PlayState.instance == null) return null;
 
-    var strumNote:StrumArrow = PlayState.instance.strumLineNotes.members[note % PlayState.instance.strumLineNotes.length];
+    var strumLineNotes:objects.note.StrumLine = PlayState.instance.opponentStrums;
+    if (note > 3) strumLineNotes = PlayState.instance.playerStrums;
+
+    var strumNote:StrumArrow = strumLineNotes.members[note % strumLineNotes.length];
     if (strumNote == null) return null;
 
     if (tag != null)

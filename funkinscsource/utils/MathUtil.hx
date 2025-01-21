@@ -85,6 +85,12 @@ class MathUtil
   }
 
   /**
+   * Function from troll-engine https://github.com/riconuts/FNF-Troll-Engine/blob/7bca73991e312ee68aa4b761f0cfe63b34303b6e/source/funkin/modchart/events/ModEaseEvent.hx#L23
+   */
+  public static function ease(e:Float->Float, t:Float, b:Float, c:Float, d:Float)
+    return c * e(t / d) + b;
+
+  /**
    * Get the base-2 logarithm of a value.
    * @param x value
    * @return `2^x`

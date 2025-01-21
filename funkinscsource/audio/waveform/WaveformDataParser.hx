@@ -100,7 +100,7 @@ class WaveformDataParser
 
   public static function parseWaveformData(path:String):Null<WaveformData>
   {
-    var rawJson:String = sys.io.File.getContent(path).trim();
+    var rawJson:String = File.getContent(path).trim();
     return parseWaveformDataString(rawJson, path);
   }
 

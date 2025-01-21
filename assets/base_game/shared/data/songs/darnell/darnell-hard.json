@@ -1225,9 +1225,6 @@
       "mustHitSection": false
     }
   ],
-  "options": {
-    "blockOpponentMode": true
-  },
   "events": [],
   "player2": "darnell",
   "offset": 0,

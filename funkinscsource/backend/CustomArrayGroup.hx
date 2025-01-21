@@ -67,24 +67,64 @@ class CustomArrayGroup<T>
   public dynamic function clear()
     members = [];
 
+  /**
+    * Grabs by index, a member from the members array
+    * @param index
+    * @return T
+     return members[index]
+   */
   public dynamic function byIndex(index:Int):T
     return members[index];
 
+  /**
+    * Index of a member in the members.
+    * @param index
+    * @return Int
+     return members.indexOf(index)
+   */
   public dynamic function indexOf(index:T):Int
     return members.indexOf(index);
 
+  /**
+   * Splice index of pos in the members array.
+   * @param index
+   * @param pos
+   * @return members.splice(index, pos)
+   */
   public dynamic function splice(index:Int, pos:Int)
     members.splice(index, pos);
 
+  /**
+   * The splice of the index of the members.
+   * @param member
+   * @param index
+   * @return splice(indexOf(member), index)
+   */
   public dynamic function spliceIndexOf(member:T, index:Int = 0)
     splice(indexOf(member), index);
 
+  /**
+   * Push a member into members array.
+   * @param member
+   * @return members.push(member)
+   */
   public dynamic function push(member:T)
     members.push(member);
 
+  /**
+   * Insert a member into the placed pos.
+   * @param pos
+   * @param member
+   * @return members.insert(pos, member)
+   */
   public dynamic function insert(pos:Int, member:T)
     members.insert(pos, member);
 
+  /**
+   * Remove a certain member from members.
+   * @param member
+   * @return members.remove(member)
+   */
   public dynamic function remove(member:T)
     members.remove(member);
 

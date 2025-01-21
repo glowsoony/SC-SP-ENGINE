@@ -341,11 +341,6 @@ class CoolUtil
   }
 
   /**
-   * Sprite getting set to this instead of the original.
-   */
-  public static var videoSprite:VideoSprite = null;
-
-  /**
    * Allows creating a video outside playstate.
    */
   public static function startVideo(name:String, type:String = 'mp4', forMidSong:Bool = false, canSkip:Bool = true, loop:Bool = false, playOnLoad:Bool = true,

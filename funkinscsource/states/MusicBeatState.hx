@@ -21,7 +21,7 @@ import scripting.*;
 import crowplexus.iris.Iris;
 #end
 
-class MusicBeatState extends #if SCEModchartingTools modcharting.ModchartMusicBeatState #else flixel.addons.transition.FlxTransitionableState #end
+class MusicBeatState extends flixel.addons.transition.FlxTransitionableState
 {
   public var curSection:Int = 0;
   public var stepsToDo:Int = 0;
@@ -115,7 +115,8 @@ class MusicBeatState extends #if SCEModchartingTools modcharting.ModchartMusicBe
       for (script in hscriptArray)
         if (script != null)
         {
-          script.executeFunction('onDestroy');
+          var ny:Dynamic = script.get('onDestroy');
+          if (ny != null && Reflect.isFunction(ny)) ny();
           script.destroy();
         }
       hscriptArray = null;

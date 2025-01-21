@@ -123,23 +123,22 @@ class ResultsScreenKadeSubstate extends substates.MusicBeatSubState
 
     if (!PlayState.isStoryMode) songText.text = '';
 
-    var score = game.songScore;
-    var acc = game.updateAcc;
+    var score = game.hud.comboStats.songScore;
+    var acc = game.hud.comboStats.updateAcc;
 
     if (PlayState.isStoryMode)
     {
-      acc = PlayState.averageWeekAccuracy;
-      score = PlayState.averageWeekScore;
+      acc = ComboStats.averageWeekAccuracy;
+      score = ComboStats.averageWeekScore;
     }
 
-    var swags = PlayState.isStoryMode ? PlayState.averageWeekSwags : PlayState.averageSwags;
-    var sicks = PlayState.isStoryMode ? PlayState.averageWeekSicks : PlayState.averageSicks;
-    var goods = PlayState.isStoryMode ? PlayState.averageWeekGoods : PlayState.averageGoods;
-    var bads = PlayState.isStoryMode ? PlayState.averageWeekBads : PlayState.averageGoods;
-    var shits = PlayState.isStoryMode ? PlayState.averageWeekShits : PlayState.averageShits;
+    var swags = PlayState.isStoryMode ? ComboStats.averageWeekSwags : ComboStats.averageSwags;
+    var sicks = PlayState.isStoryMode ? ComboStats.averageWeekSicks : ComboStats.averageSicks;
+    var goods = PlayState.isStoryMode ? ComboStats.averageWeekGoods : ComboStats.averageGoods;
+    var bads = PlayState.isStoryMode ? ComboStats.averageWeekBads : ComboStats.averageGoods;
+    var shits = PlayState.isStoryMode ? ComboStats.averageWeekShits : ComboStats.averageShits;
 
-    comboText.text = 'Judgements:\nSwags - ${swags}\nSicks - ${sicks}\nGoods - ${goods}\nBads - ${bads}\nShits - ${shits}\n\nCombo Breaks: ${PlayState.isStoryMode ? PlayState.averageWeekMisses : game.songMisses}\nHighest Combo: ${game.highestCombo + 1}\nScore: $score\n${PlayState.isStoryMode ? 'Average Accuracy' : 'Accuracy'}: ${acc}% \nRank: ${game.comboLetterRank} - ${game.ratingFC} \nRate: ${game.playbackRate}x\n\nH - Replay song';
-
+    comboText.text = 'Judgements:\nSwags - ${swags}\nSicks - ${sicks}\nGoods - ${goods}\nBads - ${bads}\nShits - ${shits}\n\nCombo Breaks: ${PlayState.isStoryMode ? ComboStats.averageWeekMisses : game.hud.comboStats.songMisses}\nHighest Combo: ${game.hud.comboStats.highestCombo + 1}\nScore: $score\n${PlayState.isStoryMode ? 'Average Accuracy' : 'Accuracy'}: ${acc}% \nRank: ${game.hud.comboStats.comboLetterRank} - ${game.hud.comboStats.ratingFC} \nRate: ${game.playbackRate}x\n\nH - Replay song';
     add(comboText);
 
     #if mobile
@@ -158,9 +157,9 @@ class ResultsScreenKadeSubstate extends substates.MusicBeatSubState
 
     add(graphSprite);
 
-    var swags = HelperFunctions.truncateFloat(PlayState.averageSwags / PlayState.averageSicks, 1);
-    var sicks = HelperFunctions.truncateFloat(PlayState.averageSicks / PlayState.averageGoods, 1);
-    var goods = HelperFunctions.truncateFloat(PlayState.averageGoods / PlayState.averageBads, 1);
+    var swags = HelperFunctions.truncateFloat(ComboStats.averageSwags / ComboStats.averageSicks, 1);
+    var sicks = HelperFunctions.truncateFloat(ComboStats.averageSicks / ComboStats.averageGoods, 1);
+    var goods = HelperFunctions.truncateFloat(ComboStats.averageGoods / ComboStats.averageBads, 1);
 
     if (swags == Math.POSITIVE_INFINITY) swags = 0;
     if (sicks == Math.POSITIVE_INFINITY) sicks = 0;
@@ -198,7 +197,7 @@ class ResultsScreenKadeSubstate extends substates.MusicBeatSubState
       Highscore.applySongRank(Highscore.songHighScoreData);
     }
 
-    mean = HelperFunctions.truncateFloat(mean / game.playerNotes, 2);
+    mean = HelperFunctions.truncateFloat(mean / game.hud.comboStats.playerNotesCount, 2);
     var acceptShit:String = (superMegaConditionShit ? '| Accepted' : '| Rejected');
 
     #if debug

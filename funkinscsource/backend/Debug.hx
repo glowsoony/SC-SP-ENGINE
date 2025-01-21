@@ -327,7 +327,7 @@ class DebugLogWriter
 
   var active = false;
   #if sys
-  var file:sys.io.FileOutput;
+  var file:FileOutput;
   #end
 
   public function new(logLevelParam:String)

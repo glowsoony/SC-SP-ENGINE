@@ -91,7 +91,8 @@ class MusicBeatSubState extends FlxSubState
       for (script in hscriptArray)
         if (script != null)
         {
-          script.executeFunction('onDestroy');
+          var ny:Dynamic = script.get('onDestroy');
+          if (ny != null && Reflect.isFunction(ny)) ny();
           script.destroy();
         }
       hscriptArray = null;
@@ -376,7 +377,7 @@ class MusicBeatSubState extends FlxSubState
   public function initHScript(file:String)
   {
     final times:Float = Date.now().getTime();
-    var newScript:HScript = new HScript(null, file);
+    var newScript:HScript = new HScript(null, file, null, false, FlxG.state.subState);
 
     try
     {

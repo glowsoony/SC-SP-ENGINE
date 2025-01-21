@@ -16,7 +16,7 @@ import flixel.system.FlxAssets.FlxShader;
 // Edited by me -glow
 class FunkinSCSprite extends FlxSkewed
 {
-  public var extraSpriteData:Map<String, Dynamic> = new Map<String, Dynamic>();
+  public var extraData:Map<String, Dynamic> = new Map<String, Dynamic>();
 
   public var zoomFactor:Float = 1;
   public var initialZoom:Float = 1;
@@ -65,12 +65,6 @@ class FunkinSCSprite extends FlxSkewed
   override public function update(elapsed:Float)
   {
     super.update(elapsed);
-    #if flxanimate
-    if (!(this is Character))
-    {
-      if (this.isAnimateAtlas) this.atlas.update(elapsed);
-    }
-    #end
   }
 
   /**
@@ -135,33 +129,37 @@ class FunkinSCSprite extends FlxSkewed
 
   public function sectionHit(curSection:Int) {}
 
+  public var allowZoomProcedure:Bool = false;
+
   public override function getScreenBounds(?newRect:FlxRect, ?camera:FlxCamera):FlxRect
   {
-    __doPreZoomScaleProcedure(camera);
-    var r = super.getScreenBounds(newRect, camera);
-    __doPostZoomScaleProcedure();
-    return r;
-  }
-
-  public override function drawComplex(camera:FlxCamera)
-  {
-    super.drawComplex(camera);
+    if (allowZoomProcedure)
+    {
+      __doPreZoomScaleProcedure(camera);
+      var r = super.getScreenBounds(newRect, camera);
+      __doPostZoomScaleProcedure();
+      return r;
+    }
+    return super.getScreenBounds(newRect, camera);
   }
 
   public override function doAdditionalMatrixStuff(matrix:flixel.math.FlxMatrix, camera:FlxCamera)
   {
     super.doAdditionalMatrixStuff(matrix, camera);
-    matrix.translate(-camera.width / 2, -camera.height / 2);
+    if (allowZoomProcedure)
+    {
+      matrix.translate(-camera.width / 2, -camera.height / 2);
 
-    var requestedZoom = FlxMath.lerp(1, camera.zoom, zoomFactor);
-    var diff = requestedZoom / camera.zoom;
-    matrix.scale(diff, diff);
-    matrix.translate(camera.width / 2, camera.height / 2);
+      var requestedZoom = FlxMath.lerp(1, camera.zoom, zoomFactor);
+      var diff = requestedZoom / camera.zoom;
+      matrix.scale(diff, diff);
+      matrix.translate(camera.width / 2, camera.height / 2);
+    }
   }
 
   public override function getScreenPosition(?point:FlxPoint, ?Camera:FlxCamera):FlxPoint
   {
-    if (__shouldDoScaleProcedure())
+    if (allowZoomProcedure && __shouldDoScaleProcedure())
     {
       __oldScrollFactor.set(scrollFactor.x, scrollFactor.y);
       var requestedZoom = FlxMath.lerp(initialZoom, camera.zoom, zoomFactor);
@@ -191,6 +189,8 @@ class FunkinSCSprite extends FlxSkewed
   private function __doPreZoomScaleProcedure(camera:FlxCamera)
   {
     if (__skipZoomProcedure = !__shouldDoScaleProcedure()) return;
+    if (!allowZoomProcedure) return;
+
     __oldScale.set(scale.x, scale.y);
     var requestedZoom = FlxMath.lerp(initialZoom, camera.zoom, zoomFactor);
     var diff = requestedZoom * camera.zoom;
@@ -200,7 +200,7 @@ class FunkinSCSprite extends FlxSkewed
 
   private function __doPostZoomScaleProcedure()
   {
-    if (__skipZoomProcedure) return;
+    if (__skipZoomProcedure || !allowZoomProcedure) return;
     scale.set(__oldScale.x, __oldScale.y);
   }
   #end
@@ -221,17 +221,14 @@ class FunkinSCSprite extends FlxSkewed
   {
     if (AnimName != null)
     {
-      if (!(this is Character))
+      if (!this.isAnimateAtlas) this.animation.play(AnimName, Force, Reversed, Frame);
+      #if flxanimate
+      else
       {
-        if (!this.isAnimateAtlas) this.animation.play(AnimName, Force, Reversed, Frame);
-        #if flxanimate
-        else
-        {
-          this.atlas.anim.play(AnimName, Force, Reversed, Frame);
-          this.atlas.update(0);
-        }
-        #end
+        this.atlas.anim.play(AnimName, Force, Reversed, Frame);
+        this.atlas.update(0);
       }
+      #end
       _lastPlayedAnimation = AnimName;
 
       var daOffset = this.getAnimOffset(AnimName);
@@ -346,15 +343,6 @@ class FunkinSCSprite extends FlxSkewed
 
   public override function draw()
   {
-    if (!(this is Character))
-    {
-      if (this.atlas != null && this.atlas.anim.curInstance != null)
-      {
-        this.copyAtlasValues();
-        this.atlas.draw();
-        return;
-      }
-    }
     super.draw();
   }
 
@@ -388,6 +376,7 @@ class FunkinSCSprite extends FlxSkewed
   // More Functions
 
   /**
+   * Function from V-Slice / FNF
    * Acts similarly to `makeGraphic`, but with improved memory usage,
    * at the expense of not being able to paint onto the resulting sprite.
    *

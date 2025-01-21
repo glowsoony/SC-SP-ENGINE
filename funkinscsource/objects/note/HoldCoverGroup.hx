@@ -1,6 +1,6 @@
 package objects.note;
 
-class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
+class HoldCoverGroup extends FlxTypedGroup<HoldCoverSprite>
 {
   public var enabled:Bool = true;
   public var canSplash:Bool = false;
@@ -10,19 +10,14 @@ class HoldCoverGroup extends FlxTypedSpriteGroup<HoldCoverSprite>
   {
     if (PlayState.instance != null)
     {
-      return (PlayState.instance.strumLineNotes != null
-        && PlayState.instance.strumLineNotes.members.length > 0
-        && !PlayState.instance.startingSong
-        && !PlayState.instance.inCutscene
-        && !PlayState.instance.inCinematic
-        && PlayState.instance.generatedMusic);
+      return (!PlayState.instance.startingSong && !PlayState.instance.inCutscene && !PlayState.instance.inCinematic && PlayState.instance.generatedMusic);
     }
     return false;
   }
 
   public function new()
   {
-    super(0, 0, 0);
+    super(0);
   }
 
   public dynamic function setParentAndCreate(strumLine:StrumLine, amount:Int)

@@ -39,6 +39,8 @@ class PauseSubState extends MusicBeatSubState
 
   var bg:FlxSprite;
 
+  public static var pauseCounter:Int = 0;
+
   override function create()
   {
     game.paused = true;
@@ -387,7 +389,7 @@ class PauseSubState extends MusicBeatSubState
   {
     switch (daSelected)
     {
-      case "Resume":
+      case 'Resume':
         if (ClientPrefs.data.pauseCountDown)
         {
           unPauseTimer = new FlxTimer().start(Conductor.crochet / 1000 / music.pitch, function(hmmm:FlxTimer) {
@@ -407,6 +409,11 @@ class PauseSubState extends MusicBeatSubState
         }
         inCountDown = true;
         if (!isCountDown) close();
+      case 'Options':
+        menuItems = optionChoices;
+        deleteSkipTimeText();
+        regenMenu();
+        add(optionsText); // ensure it's at front
       case 'Change Difficulty':
         menuItems = difficultyChoices;
         deleteSkipTimeText();
@@ -443,18 +450,11 @@ class PauseSubState extends MusicBeatSubState
       case 'Toggle Botplay':
         game.cpuControlled = !game.cpuControlled;
         PlayState.changedDifficulty = true;
-        game.botplayTxt.visible = game.cpuControlled;
-        game.botplayTxt.alpha = 1;
-        game.botplaySine = 0;
-      case 'Options':
-        menuItems = optionChoices;
-        deleteSkipTimeText();
-        regenMenu();
-        add(optionsText); // ensure it's at front
+        game.hud.botplayTxt.visible = game.cpuControlled;
+        game.hud.botplayTxt.alpha = 1;
+        game.hud.botplaySine = 0;
       case 'End Song':
         close();
-        game.notes.clear();
-        game.unspawnNotes.clear();
         game.finishSong(true);
       case "Exit to menu":
         #if DISCORD_ALLOWED DiscordClient.resetClientID(); #end
@@ -519,8 +519,8 @@ class PauseSubState extends MusicBeatSubState
   function pauseCountDown()
   {
     if (game == null) return;
-    game.stageIntroSoundsSuffix = game.stage.stageIntroSoundsSuffix != null ? game.stage.stageIntroSoundsSuffix : '';
-    game.stageIntroSoundsPrefix = game.stage.stageIntroSoundsPrefix != null ? game.stage.stageIntroSoundsPrefix : '';
+    game.hud.stageIntroSoundsSuffix = game.stage.stageIntroSoundsSuffix != null ? game.stage.stageIntroSoundsSuffix : '';
+    game.hud.stageIntroSoundsPrefix = game.stage.stageIntroSoundsPrefix != null ? game.stage.stageIntroSoundsPrefix : '';
 
     var introAssets:Map<String, Array<String>> = new Map<String, Array<String>>();
     var introImagesArray:Array<String> = switch (PlayState.stageUI)
@@ -550,13 +550,15 @@ class PauseSubState extends MusicBeatSubState
       {
         introAlts = introAssets.get(value);
 
-        if (game.stageIntroSoundsSuffix != null && game.stageIntroSoundsSuffix.length > 0) game.introSoundsSuffix = game.stageIntroSoundsSuffix;
+        if (game.hud.stageIntroSoundsSuffix != null
+          && game.hud.stageIntroSoundsSuffix.length > 0) game.hud.introSoundsSuffix = game.hud.stageIntroSoundsSuffix;
         else
-          game.introSoundsSuffix = '';
+          game.hud.introSoundsSuffix = '';
 
-        if (game.stageIntroSoundsPrefix != null && game.stageIntroSoundsPrefix.length > 0) game.introSoundsPrefix = game.stageIntroSoundsPrefix;
+        if (game.hud.stageIntroSoundsPrefix != null
+          && game.hud.stageIntroSoundsPrefix.length > 0) game.hud.introSoundsPrefix = game.hud.stageIntroSoundsPrefix;
         else
-          game.introSoundsPrefix = '';
+          game.hud.introSoundsPrefix = '';
       }
     }
 
@@ -578,15 +580,15 @@ class PauseSubState extends MusicBeatSubState
     {
       case 4:
         var isNotNull = (introAlts.length > 3 ? introAlts[0] : "missingRating");
-        getReady = createCountdownSprite(isNotNull, antialias, game.introSoundsPrefix + 'intro3' + game.introSoundsSuffix, introArrays0);
+        getReady = createCountdownSprite(isNotNull, antialias, game.hud.introSoundsPrefix + 'intro3' + game.hud.introSoundsSuffix, introArrays0);
       case 3:
-        countdownReady = createCountdownSprite(introAlts[introAlts.length - 3], antialias, game.introSoundsPrefix + 'intro2' + game.introSoundsSuffix,
+        countdownReady = createCountdownSprite(introAlts[introAlts.length - 3], antialias, game.hud.introSoundsPrefix + 'intro2' + game.hud.introSoundsSuffix,
           introArrays1);
       case 2:
-        countdownSet = createCountdownSprite(introAlts[introAlts.length - 2], antialias, game.introSoundsPrefix + 'intro1' + game.introSoundsSuffix,
+        countdownSet = createCountdownSprite(introAlts[introAlts.length - 2], antialias, game.hud.introSoundsPrefix + 'intro1' + game.hud.introSoundsSuffix,
           introArrays2);
       case 1:
-        countdownGo = createCountdownSprite(introAlts[introAlts.length - 1], antialias, game.introSoundsPrefix + 'introGo' + game.introSoundsSuffix,
+        countdownGo = createCountdownSprite(introAlts[introAlts.length - 1], antialias, game.hud.introSoundsPrefix + 'introGo' + game.hud.introSoundsSuffix,
           introArrays3);
       case 0:
         close();
@@ -720,7 +722,6 @@ class PauseSubState extends MusicBeatSubState
   function updateSkipTextStuff()
   {
     if (skipTimeText == null || skipTimeTracker == null) return;
-
     skipTimeText.x = skipTimeTracker.x + skipTimeTracker.width + 60;
     skipTimeText.y = skipTimeTracker.y;
     skipTimeText.visible = (skipTimeTracker.alpha >= 1);

@@ -778,4 +778,10 @@ class NotesColorSubState extends MusicBeatSubState
 
   function getShader()
     return Note.globalRgbShaders[curSelectedNote];
+
+  override function destroy()
+  {
+    Note.globalRgbShaders = [];
+    super.destroy();
+  }
 }

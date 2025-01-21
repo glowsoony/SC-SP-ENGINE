@@ -3,17 +3,14 @@ package psychlua;
 import flixel.FlxBasic;
 import flixel.util.FlxAxes;
 import psychlua.LuaUtils;
-#if LUA_ALLOWED
-import psychlua.FunkinLua;
-#end
 #if HSCRIPT_ALLOWED
 import crowplexus.iris.Iris;
+import crowplexus.iris.IrisConfig;
 import crowplexus.iris.ErrorSeverity;
 import crowplexus.hscript.Expr.Error as IrisError;
 
 class HScript extends Iris
 {
-  public var isHxStage:Bool = false;
   public var filePath:String;
   public var modFolder:String;
   public var executed:Bool = false;
@@ -103,18 +100,8 @@ class HScript extends Iris
 
   public var origin:String;
 
-  override public function new(?parent:Dynamic, file:String = '', ?varsToBring:Any = null, ?isHxStage:Bool = false)
+  override public function new(?parent:Dynamic, file:String = '', ?varsToBring:Any = null, ?manualRun:Bool = false, ?parentInstance:Dynamic = null)
   {
-    this.isHxStage = isHxStage;
-
-    #if LUA_ALLOWED
-    parentLua = parent;
-    if (parent != null)
-    {
-      this.origin = parent.scriptName;
-      this.modFolder = parent.modFolder;
-    }
-    #end
     filePath = file;
     if (filePath != null && filePath.length > 0 && parent == null)
     {
@@ -126,20 +113,77 @@ class HScript extends Iris
         this.modFolder = myFolder[1];
       #end
     }
-    super(null, {name: origin, autoRun: false, autoPreset: false});
     var scriptThing:String = file;
+    var scriptName:String = null;
     if (parent == null && file != null)
     {
       var f:String = file.replace('\\', '/');
       if (f.contains('/') && !f.contains('\n'))
       {
         scriptThing = File.getContent(f);
+        scriptName = f;
       }
     }
-    preset();
-    Iris.logLevel = hscriptLog;
-    this.scriptCode = scriptThing;
+    #if LUA_ALLOWED
+    if (scriptName == null && parent != null) scriptName = parent.scriptName;
+    #end
     this.varsToBring = varsToBring;
+    this.scriptCode = scriptThing;
+    super(scriptThing, new IrisConfig(scriptName, false, false));
+    changeInstance(parentInstance);
+    Iris.logLevel = hscriptLog;
+
+    #if LUA_ALLOWED
+    parentLua = parent;
+    if (parent != null)
+    {
+      this.origin = parent.scriptName;
+      this.modFolder = parent.modFolder;
+    }
+    #end
+    if (!manualRun)
+    {
+      var _active:Bool = tryRunning();
+      if (_active == false) return;
+    }
+    Iris.warn = function(x, ?pos:haxe.PosInfos) {
+      if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.YELLOW);
+      Iris.logLevel(WARN, x, pos);
+    }
+    Iris.error = function(x, ?pos:haxe.PosInfos) {
+      if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.ORANGE);
+
+      Iris.logLevel(ERROR, x, pos);
+    }
+    Iris.fatal = function(x, ?pos:haxe.PosInfos) {
+      if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.RED);
+      Iris.logLevel(FATAL, x, pos);
+    }
+  }
+
+  function tryRunning(destroyOnError:Bool = true):Bool
+  {
+    try
+    {
+      preset();
+      execute();
+      return true;
+    }
+    catch (e:haxe.Exception)
+    {
+      if (destroyOnError) this.destroy();
+      throw e;
+      return false;
+    }
+    return false;
+  }
+
+  public function changeInstance(instance:Dynamic = null)
+  {
+    final customInterp:CustomInterp = new CustomInterp();
+    customInterp.parentInstance = instance == null ? FlxG.state : instance;
+    customInterp.showPosOnLog = false;
+    this.interp = customInterp;
   }
 
   var varsToBring(default, set):Any = null;
@@ -185,7 +229,7 @@ class HScript extends Iris
     set('FlxSort', flixel.util.FlxSort);
     set('Application', lime.app.Application);
     set('FlxGraphic', flixel.graphics.FlxGraphic);
-    set('File', sys.io.File);
+    set('File', File);
     set('FlxTrail', flixel.addons.effects.FlxTrail);
     set('FlxShader', flixel.system.FlxAssets.FlxShader);
     set('FlxBar', flixel.ui.FlxBar);
@@ -428,68 +472,7 @@ class HScript extends Iris
     set('Function_StopHScript', psychlua.LuaUtils.Function_StopHScript);
     set('Function_StopAll', psychlua.LuaUtils.Function_StopAll);
 
-    if (isHxStage)
-    {
-      Debug.logInfo('Limited usage of playstate properties inside the stage .lua\'s or .hx\'s!');
-      set('hideLastBG', function(hid:Bool) {
-        Stage.instance.hideLastBG = hid;
-      });
-      set('layerInFront', function(layer:Int = 0, id:Dynamic) Stage.instance.layInFront[layer].push(id));
-      set('toAdd', function(id:Dynamic) Stage.instance.toAdd.push(id));
-      set('setSwagBack', function(id:String, sprite:Dynamic) Stage.instance.swagBacks.set(id, sprite));
-      set('getSwagBack', function(id:String) return Stage.instance.swagBacks.get(id));
-      set('setSlowBacks', function(id:Dynamic, sprite:Array<FlxSprite>) Stage.instance.slowBacks.set(id, sprite));
-      set('getSlowBacks', function(id:Dynamic) return Stage.instance.slowBacks.get(id));
-      set('setSwagGroup', function(id:String, group:FlxTypedGroup<Dynamic>) Stage.instance.swagGroups.set(id, group));
-      set('getSwagGroup', function(id:String) return Stage.instance.swagGroups.get(id));
-      set('animatedBacks', function(id:FlxSprite) Stage.instance.animatedBacks.push(id));
-      set('animatedBacks2', function(id:FlxSprite) Stage.instance.animatedBacks2.push(id));
-      set('useSwagBack', function(id:String) return Stage.instance.swagBacks[id]);
-    }
-
-    set('add', FlxG.state.add);
-    set('insert', FlxG.state.insert);
-    set('remove', FlxG.state.remove);
-
-    #if SCEModchartingTools
-    set('ModchartEditorState', modcharting.ModchartEditorState);
-    set('ModchartEvent', modcharting.ModchartEvent);
-    set('ModchartEventManager', modcharting.ModchartEventManager);
-    set('ModchartFile', modcharting.ModchartFile);
-    set('ModchartFuncs', modcharting.ModchartFuncs);
-    set('ModchartMusicBeatState', modcharting.ModchartMusicBeatState);
-    set('ModchartUtil', modcharting.ModchartUtil);
-    for (i in ['mod', 'Modifier'])
-      set(i, modcharting.Modifier); // the game crashes without this???????? what??????????? -- fue glow
-    set('ModifierSubValue', modcharting.Modifier.ModifierSubValue);
-    set('ModTable', modcharting.ModTable);
-    set('NoteMovement', modcharting.NoteMovement);
-    set('NotePositionData', modcharting.NotePositionData);
-    set('Playfield', modcharting.Playfield);
-    set('PlayfieldRenderer', modcharting.PlayfieldRenderer);
-    set('SimpleQuaternion', modcharting.SimpleQuaternion);
-    set('SustainStrip', modcharting.SustainStrip);
-
-    // Why?
-    if (PlayState.instance != null
-      && PlayState.SONG != null
-      && !isHxStage
-      && PlayState.SONG.options.notITG
-      && ClientPrefs.getGameplaySetting('modchart')) modcharting.ModchartFuncs.loadHScriptFunctions(this);
-    #end
     set('setAxes', function(axes:String) return FlxAxes.fromString(axes));
-
-    if (states.PlayState.instance == FlxG.state)
-    {
-      #if (HSCRIPT_ALLOWED && HScriptImproved)
-      set('doHSI', function(path:String) {
-        states.PlayState.instance.addScript(path, CODENAME);
-      });
-      #end
-      set('addBehindGF', states.PlayState.instance.addBehindGF);
-      set('addBehindDad', states.PlayState.instance.addBehindDad);
-      set('addBehindBF', states.PlayState.instance.addBehindBF);
-    }
 
     set("playDadSing", true);
     set("playBFSing", true);
@@ -570,8 +553,8 @@ class HScript extends Iris
     return call;
   }
 
-  public static function initHaxeModuleCode(funk:FunkinLua, codeToRun:String, ?varsToBring:Any, ?isHxStage:Bool)
-    funk.initHaxeModule(codeToRun, varsToBring, isHxStage);
+  public static function initHaxeModuleCode(funk:FunkinLua, codeToRun:String, ?varsToBring:Any, ?instance:Dynamic = null)
+    funk.initHaxeModule(codeToRun, varsToBring, instance);
 
   public static function initHaxeModule(funk:FunkinLua)
     funk.initHaxeModule();
@@ -678,13 +661,6 @@ class HScript extends Iris
     super.destroy();
   }
 
-  #if SCEModchartingTools
-  public inline function initMod(mod:modcharting.Modifier)
-  {
-    executeFunction("initMod", [mod]);
-  }
-  #end
-
   function set_varsToBring(values:Any)
   {
     if (varsToBring != null) for (key in Reflect.fields(varsToBring))
@@ -700,6 +676,47 @@ class HScript extends Iris
     }
 
     return varsToBring = values;
+  }
+}
+
+class CustomInterp extends crowplexus.hscript.Interp
+{
+  public var parentInstance:Dynamic;
+
+  public function new()
+  {
+    super();
+  }
+
+  override function resolve(id:String):Dynamic
+  {
+    if (locals.exists(id))
+    {
+      var l = locals.get(id);
+      return l.r;
+    }
+
+    if (variables.exists(id))
+    {
+      var v = variables.get(id);
+      return v;
+    }
+
+    if (imports.exists(id))
+    {
+      var v = imports.get(id);
+      return v;
+    }
+
+    if (parentInstance != null)
+    {
+      var v = Reflect.getProperty(parentInstance, id);
+      return v;
+    }
+
+    error(EUnknownVariable(id));
+
+    return null;
   }
 }
 #elseif LUA_ALLOWED

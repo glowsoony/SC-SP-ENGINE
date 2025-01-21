@@ -93,8 +93,8 @@ class CreditsState extends MusicBeatState
       [
         "crowplexus",
         "crowplexus",
-        "HScript Iris, Input System v3, and Other PRs",
-        "https://github.com/crowplexus",
+        "Linux Support, HScript Iris, Input System v3, and Other PRs",
+        "https://twitter.com/IamMorwen",
         "CFCFCF"
       ],
       [
@@ -142,7 +142,7 @@ class CreditsState extends MusicBeatState
       [
         "Tahir Toprak Karabekiroglu",
         "tahir",
-        "Note Splash Editor and Other PRs",
+        "Mac Support, Note Splash Editor\nand Other PRs",
         "https://x.com/TahirKarabekir",
         "A04397"
       ],

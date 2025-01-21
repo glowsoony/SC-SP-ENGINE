@@ -35,13 +35,13 @@ class FlxAtlasSprite extends FlxAnimate
   {
     if (settings == null) settings = SETTINGS;
 
-    if (path == null || path == "") Debug.logInfo('Null path specified for FlxAtlasSprite!');
+    if (path == null || path.length < 1) Debug.logInfo('Null path specified for FlxAtlasSprite!');
     else
       Paths.loadAnimateAtlas(this, path);
 
     super(x, y, path, settings);
 
-    if (this.anim.curInstance == null) Debug.logInfo('FlxAtlasSprite not initialized properly. Are you sure the path (${path}) exists?');
+    if (this.anim.curInstance == null) Debug.logInfo('FlxAtlasSprite not initialized properly. Are you sure the path ($path) exists?');
   }
 
   public function onLoadAtlas()

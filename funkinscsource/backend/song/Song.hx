@@ -28,6 +28,8 @@ class Song
 
   public var extraData:Dynamic;
 
+  public var totalColumns:Int = 4;
+
   public static function convert(songJson:Dynamic) // Convert old charts to psych_v1 format
   {
     function checkToString(e:Dynamic)
@@ -88,17 +90,31 @@ class Song
         if (Reflect.hasField(section, 'lengthInSteps')) Reflect.deleteField(section, 'lengthInSteps');
       }
 
+      // NOTE: Psych Engine does NOT have multikey out of the box, this is simply done in case you WANT to add it via scripting
+      // there's no UI element in the chart editor to modify the value of `totalColumns` so you might wanna change that manually yourself
+      // if you're forking the engine, you might wanna add that
+      var totalColumns:Int = cast(songJson.totalColumns, Int);
+      if (totalColumns < 1) totalColumns = 4; // just in case
+
       for (note in section.sectionNotes)
       {
-        var gottaHitNote:Bool = (note[1] < 4) ? section.mustHitSection : !section.mustHitSection;
-        note[1] = (note[1] % 4) + (gottaHitNote ? 0 : 4);
+        var gottaHitNote:Bool = (note[1] < totalColumns) ? section.mustHitSection : !section.mustHitSection;
+        note[1] = (note[1] % totalColumns) + (gottaHitNote ? 0 : totalColumns);
 
         if (note[3] != null && !Std.isOfType(note[3], String)) note[3] = Note.defaultNoteTypes[note[3]]; // compatibility with Week 7 and 0.1-0.3 psych charts
       }
     }
   }
 
+  public static function generalChecks(songJson:Dynamic)
+  {
+    if (songJson.totalColumns == null || songJson.totalColumns < 1) songJson.totalColumns = 4;
+    if (songJson.strumLineIds == null || songJson.strumLineIds.length < 1) songJson.strumLineIds = [0, 1];
+    if (songJson.offset == null) songJson.offset = 0; // Offset can be negative
+  }
+
   public static var chartPath:String;
+
   public static var loadedSongName:String;
   public static var formattedSongName:String;
   public static var displayedName:String;
@@ -147,6 +163,8 @@ class Song
       if (subSong != null && Type.typeof(subSong) == TObject) songJson = subSong;
     }
 
+    generalChecks(songJson);
+
     if (convertTo != null && convertTo.length > 0)
     {
       var fmt:String = songJson.format;
@@ -167,8 +185,29 @@ class Song
     processSongDataToSCEData(songJson);
 
     var sectionsData:Array<SwagSection> = songJson.notes;
-    if (sectionsData != null) for (i => sections in sectionsData)
-      sections.index = i;
+    if (sectionsData != null)
+    {
+      for (index => section in sectionsData)
+      {
+        section.index = index;
+
+        var totalColumns:Int = songJson.totalColumns != null ? songJson.totalColumns : 4;
+        if (totalColumns < 1) totalColumns = 4; // just in case
+
+        var ids:Array<Int> = songJson.strumLineIds != null ? songJson.strumLineIds : [0, 1];
+        if (ids.length < 1) ids = [0, 1]; // just in case
+
+        for (note in section.sectionNotes)
+        {
+          if (note[4] == null) note[4] = ids[note[1] >= totalColumns ? 1 : 0];
+          else
+          {
+            if (note[1] < totalColumns && note[4] == ids[1]) note[4] = ids[0];
+            if (note[1] >= totalColumns && note[4] == ids[0]) note[4] = ids[1];
+          }
+        }
+      }
+    }
     return songJson;
   }
 
@@ -245,6 +284,10 @@ class Song
     }
     try
     {
+      if (songJson.options == null) songJson.options = {}
+      if (songJson.gameOverData == null) songJson.gameOverData = {}
+      if (songJson.characters == null) songJson.characters = {}
+
       /*
         Original Event Format
           event = [
@@ -261,12 +304,7 @@ class Song
             [
               events,
               [
-                value1
-                value2
-                value3
-                value4
-                value5
-                value6
+                amount of values.
               ]
             ]
           ]
@@ -293,8 +331,8 @@ class Song
           {
             // Comp for old event loading
             var params:Array<String> = [];
-            if (Std.isOfType(event[1][i][1], Array)) params = event[1][i][1];
-            else if (Std.isOfType(event[1][i][1], String))
+            if (Std.isOfType(event[1][i][1], Array)) params = event[1][i][1]; // Undefined amount
+            else if (Std.isOfType(event[1][i][1], String)) // Default Standard would be 6
             {
               for (j in 1...6)
               {
@@ -310,12 +348,7 @@ class Song
         songJson.events = newEvents;
       }
 
-      if (songJson.options == null)
-      {
-        songJson.options = {}
-      }
-
-      var options:Array<String> = [
+      final options:Array<String> = [
         // RGB Bools
         'disableNoteRGB',
         'disableNoteCustomRGB',
@@ -347,7 +380,7 @@ class Song
         'instrumentalSuffix'
       ];
 
-      var defaultOptionValues:Map<String, Dynamic> = [
+      final defaultOptionValues:Map<String, Dynamic> = [
         'disableNoteRGB' => false,
         'disableNoteCustomRGB' => false,
         'disableStrumRGB' => false,
@@ -391,14 +424,8 @@ class Song
         }
       }
 
-      if (songJson.gameOverData == null)
-      {
-        songJson.gameOverData = {}
-      }
-
-      var gameOverData:Array<String> = ['gameOverChar', 'gameOverSound', 'gameOverLoop', 'gameOverEnd'];
-
-      var defaultGameOverValues:Map<String, String> = [
+      final gameOverData:Array<String> = ['gameOverChar', 'gameOverSound', 'gameOverLoop', 'gameOverEnd'];
+      final defaultGameOverValues:Map<String, String> = [
         'gameOverChar' => "bf-dead",
         'gameOverSound' => "fnf_loss_sfx",
         'gameOverLoop' => "gameOver",
@@ -418,15 +445,10 @@ class Song
         }
       }
 
-      if (songJson.characters == null)
-      {
-        songJson.characters = {}
-      }
+      final characters:Array<String> = ['player', 'opponent', 'girlfriend', 'secondOpponent'];
+      final originalChar:Array<String> = ['player1', 'player2', 'gfVersion', 'player4'];
 
-      var characters:Array<String> = ['player', 'opponent', 'girlfriend', 'secondOpponent'];
-      var originalChar:Array<String> = ['player1', 'player2', 'gfVersion', 'player4'];
-
-      var defaultCharacters:Map<String, String> = [
+      final defaultCharacters:Map<String, String> = [
         'player' => "bf",
         'opponent' => "dad",
         'girlfriend' => "gf",

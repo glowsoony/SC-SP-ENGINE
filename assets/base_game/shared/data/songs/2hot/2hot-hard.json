@@ -1,5 +1,5 @@
 {
-	"song": {
+  "song": {
     "generatedBy": "Psych Engine v1.0b - Chart Editor V-Slice Importer",
     "charter": "Jenny Crowe + Spazkid + ninjamuffin99",
     "artist": "Kawai Sprite",
@@ -1585,9 +1585,6 @@
         "mustHitSection": true
       }
     ],
-    "options": {
-      "blockOpponentMode": true
-    },
     "gfVersion": "nene",
     "format": "psych_v1_convert",
     "bpm": 182,

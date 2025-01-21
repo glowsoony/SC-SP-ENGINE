@@ -120,9 +120,9 @@ class SCScript extends flixel.FlxBasic
     super();
   }
 
-  public function loadScript(path:String)
+  public function loadScript(path:String, ?parent:Any = null)
   {
-    hsCode = new HScriptSC(path);
+    hsCode = new HScriptSC(path, parent);
     presetScript();
   }
 
@@ -319,31 +319,6 @@ class SCScript extends flixel.FlxBasic
     setVar('insert', FlxG.state.insert);
     setVar('remove', FlxG.state.remove);
 
-    #if SCEModchartingTools
-    setVar('ModchartEditorState', modcharting.ModchartEditorState);
-    setVar('ModchartEvent', modcharting.ModchartEvent);
-    setVar('ModchartEventManager', modcharting.ModchartEventManager);
-    setVar('ModchartFile', modcharting.ModchartFile);
-    setVar('ModchartFuncs', modcharting.ModchartFuncs);
-    setVar('ModchartMusicBeatState', modcharting.ModchartMusicBeatState);
-    setVar('ModchartUtil', modcharting.ModchartUtil);
-    for (i in ['mod', 'Modifier'])
-      setVar(i, modcharting.Modifier); // the game crashes without this???????? what??????????? -- fue glow
-    setVar('ModifierSubValue', modcharting.Modifier.ModifierSubValue);
-    setVar('ModTable', modcharting.ModTable);
-    setVar('NoteMovement', modcharting.NoteMovement);
-    setVar('NotePositionData', modcharting.NotePositionData);
-    setVar('Playfield', modcharting.Playfield);
-    setVar('PlayfieldRenderer', modcharting.PlayfieldRenderer);
-    setVar('SimpleQuaternion', modcharting.SimpleQuaternion);
-    setVar('SustainStrip', modcharting.SustainStrip);
-
-    // Why?
-    if (states.PlayState.instance != null
-      && states.PlayState.SONG.options != null
-      && states.PlayState.SONG.options.notITG
-      && ClientPrefs.getGameplaySetting('modchart')) modcharting.ModchartFuncs.loadHScriptFunctions(this);
-    #end
     setVar('setAxes', function(axes:String) return flixel.util.FlxAxes.fromString(axes));
 
     if (states.PlayState.instance == FlxG.state)

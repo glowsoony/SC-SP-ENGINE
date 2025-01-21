@@ -154,3 +154,7 @@ _____________________________________
    * You can play on the opponent's side!
   * You can turn off the sustains!
  * You can do a show casing mode for gameplay, playing normaly, or even for videos!
+
+---
+ - [Todo](docs/files/TODO.md)
+---

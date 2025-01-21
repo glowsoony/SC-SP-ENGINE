@@ -75,7 +75,7 @@ class EditorPlayState extends MusicBeatSubState
     playbackRate = FlxG.sound.music.pitch;
     strumLineNotes.playbackSpeed = playbackRate;
     strumLineNotes.calls.onMissed = function(daNote:Note) {
-      if (daNote.mustPress && !daNote.ignoreNote && (daNote.tooLate || !daNote.wasGoodHit))
+      if (daNote.strumLineID != 0 && !daNote.ignoreNote && (daNote.tooLate || !daNote.wasGoodHit))
       {
         noteMiss(daNote);
         strumLineNotes.calls.noteMissed.dispatch(daNote);
@@ -179,10 +179,8 @@ class EditorPlayState extends MusicBeatSubState
     {
       strumLineNotes.notes.forEachAlive(function(daNote:Note) {
         var strumGroup:FlxTypedGroup<StrumArrow> = playerStrums;
-        if (!daNote.mustPress) strumGroup = opponentStrums;
-        var strum:StrumArrow = strumGroup.members[daNote.noteData];
+        var strum:StrumArrow = strumGroup.members[daNote.noteData % strumGroup.members.length - 1];
         daNote.followStrumArrow(strum, daNote.noteScrollSpeed / playbackRate);
-        if (!daNote.mustPress && daNote.wasGoodHit && !daNote.hitByOpponent && !daNote.ignoreNote) opponentNoteHit(daNote);
         if (daNote.isSustainNote && strum.sustainReduce) daNote.clipToStrumArrow(strum);
         // Kill extremely late notes and cause misses
         if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
@@ -310,10 +308,18 @@ class EditorPlayState extends MusicBeatSubState
         for (evilNote in unspawnNotes)
         {
           var matches:Bool = (note.noteData == evilNote.noteData
-            && note.mustPress == evilNote.mustPress
+            && note.strumLineID == evilNote.strumLineID
             && note.noteType == evilNote.noteType);
           if (matches && Math.abs(note.strumTime - evilNote.strumTime) == 0.0)
           {
+            if (evilNote.tail.length > 0)
+            {
+              for (tail in evilNote.tail)
+              {
+                tail.destroy();
+                unspawnNotes.remove(tail);
+              }
+            }
             evilNote.destroy();
             unspawnNotes.remove(evilNote);
             // continue;
@@ -330,10 +336,10 @@ class EditorPlayState extends MusicBeatSubState
           prevNote: oldNote,
           createdFrom: this,
           scrollSpeed: songSpeed,
-          parentStrumline: note.mustPress ? playerStrums : opponentStrums,
+          parentStrumline: null,
           inEditor: false
         });
-      swagNote.setupNote(note.mustPress, note.mustPress ? 1 : 0, 0, note.noteType);
+      swagNote.setupNote(1, 0, 0, note.noteType);
       swagNote.sustainLength = note.sustainLength;
       swagNote.gfNote = note.gfNote;
       swagNote.scrollFactor.set();
@@ -356,15 +362,15 @@ class EditorPlayState extends MusicBeatSubState
               prevNote: oldNote,
               createdFrom: this,
               scrollSpeed: songSpeed,
-              parentStrumline: note.mustPress ? playerStrums : opponentStrums,
+              parentStrumline: null,
               inEditor: false
             });
-          sustainNote.setupNote(swagNote.mustPress, swagNote.mustPress ? 1 : 0, 0, swagNote.noteType);
-          sustainNote.gfNote = swagNote.gfNote;
+          sustainNote.setupNote(1, 0, 0, note.noteType);
+          sustainNote.gfNote = note.gfNote;
           sustainNote.scrollFactor.set();
           sustainNote.parent = swagNote;
           unspawnNotes.push(sustainNote);
-          swagNote.tail.push(sustainNote);
+          sustainNote.tail.push(sustainNote);
           sustainNote.correctionOffset = swagNote.height / 2;
           if (!PlayState.isPixelStage)
           {
@@ -381,8 +387,8 @@ class EditorPlayState extends MusicBeatSubState
             oldNote.scale.y /= playbackRate;
             oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
           }
-          if (sustainNote.mustPress) sustainNote.x += FlxG.width / 2; // general offset
-          else if (ClientPrefs.data.middleScroll)
+          sustainNote.x += FlxG.width / 2; // general offset
+          if (ClientPrefs.data.middleScroll)
           {
             sustainNote.x += 310;
             if (sustainNote.noteData > 1) // Up and Right
@@ -390,11 +396,9 @@ class EditorPlayState extends MusicBeatSubState
           }
         }
       }
-      if (swagNote.mustPress)
-      {
-        swagNote.x += FlxG.width / 2; // general offset
-      }
-      else if (ClientPrefs.data.middleScroll)
+
+      swagNote.x += FlxG.width / 2; // general offset
+      if (ClientPrefs.data.middleScroll)
       {
         swagNote.x += 310;
         if (swagNote.noteData > 1) // Up and Right
@@ -409,7 +413,7 @@ class EditorPlayState extends MusicBeatSubState
 
   private function generateStaticArrows(player:Int):Void
   {
-    var strumLineX:Float = ClientPrefs.data.middleScroll ? PlayState.STRUM_X_MIDDLESCROLL : PlayState.STRUM_X;
+    var strumLineX:Float = ClientPrefs.data.middleScroll ? StrumLine.STRUM_X_MIDDLESCROLL : StrumLine.STRUM_X;
     var strumLineY:Float = ClientPrefs.data.downScroll ? (FlxG.height - 150) : 50;
     for (i in 0...4)
     {
@@ -652,8 +656,8 @@ class EditorPlayState extends MusicBeatSubState
     var lastTime:Float = Conductor.songPosition;
     if (Conductor.songPosition >= 0) Conductor.songPosition = FlxG.sound.music.time + Conductor.offset;
     // obtain notes that the player can hit
-    var plrInputNotes:Array<Note> = strumLineNotes.notes.members.filter(function(n:Note) return n != null && n.canBeHit && n.mustPress && !n.tooLate
-      && !n.wasGoodHit && !n.blockHit && !n.isSustainNote && n.noteData == key);
+    var plrInputNotes:Array<Note> = strumLineNotes.notes.members.filter(function(n:Note) return n != null && n.canBeHit && !n.tooLate && !n.wasGoodHit
+      && !n.blockHit && !n.isSustainNote && n.noteData == key);
     plrInputNotes.sort(PlayState.sortHitNotes);
     var shouldMiss:Bool = !ClientPrefs.data.ghostTapping;
     if (plrInputNotes.length != 0)
@@ -678,7 +682,7 @@ class EditorPlayState extends MusicBeatSubState
     }
     // more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
     Conductor.songPosition = lastTime;
-    var spr:StrumArrow = playerStrums.members[key];
+    var spr:StrumArrow = playerStrums.members[key % playerStrums.members.length - 1];
     if (spr != null && spr.animation.curAnim.name != 'confirm')
     {
       spr.playAnim('pressed');
@@ -696,7 +700,7 @@ class EditorPlayState extends MusicBeatSubState
 
   private function keyReleased(key:Int)
   {
-    var spr:StrumArrow = playerStrums.members[key];
+    var spr:StrumArrow = playerStrums.members[key % playerStrums.members.length - 1];
     if (spr != null)
     {
       spr.playAnim('static');
@@ -725,7 +729,7 @@ class EditorPlayState extends MusicBeatSubState
     {
       for (n in strumLineNotes.notes)
       { // I can't do a filter here, that's kinda awesome
-        var canHit:Bool = (n != null && n.canBeHit && n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit);
+        var canHit:Bool = (n != null && n.canBeHit && !n.tooLate && !n.wasGoodHit && !n.blockHit);
         if (guitarHeroSustains) canHit = canHit && n.parent != null && n.parent.wasGoodHit;
         if (canHit && n.isSustainNote)
         {
@@ -743,7 +747,7 @@ class EditorPlayState extends MusicBeatSubState
   function opponentNoteHit(note:Note):Void
   {
     if (PlayState.SONG.needsVoices && opponentVocals.length <= 0) vocals.volume = 1;
-    var strum:StrumArrow = opponentStrums.members[Std.int(Math.abs(note.noteData))];
+    var strum:StrumArrow = opponentStrums.members[note.noteData % opponentStrums.members.length - 1];
     if (strum != null)
     {
       strum.playAnim('confirm', true);
@@ -771,7 +775,7 @@ class EditorPlayState extends MusicBeatSubState
       if (combo > 9999) combo = 9999;
       popUpScore(note);
     }
-    var spr:StrumArrow = playerStrums.members[note.noteData];
+    var spr:StrumArrow = playerStrums.members[note.noteData % playerStrums.members.length - 1];
     if (spr != null) spr.playAnim('confirm', true);
     vocals.volume = 1;
     if (!note.isSustainNote) invalidateNote(note);
@@ -782,7 +786,7 @@ class EditorPlayState extends MusicBeatSubState
     // Dupe note remove
     strumLineNotes.notes.forEachAlive(function(note:Note) {
       if (daNote != note
-        && daNote.mustPress
+        && daNote.strumLineID == note.strumLineID
         && daNote.noteData == note.noteData
         && daNote.isSustainNote == note.isSustainNote
         && Math.abs(daNote.strumTime - note.strumTime) < 1) invalidateNote(daNote);
@@ -841,7 +845,7 @@ class EditorPlayState extends MusicBeatSubState
   {
     if (note != null)
     {
-      var strum:StrumArrow = playerStrums.members[note.noteData];
+      var strum:StrumArrow = playerStrums.members[note.noteData % playerStrums.members.length - 1];
       if (strum != null) spawnNoteSplash(note, note.noteData, strum);
     }
   }

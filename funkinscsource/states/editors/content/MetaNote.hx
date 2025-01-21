@@ -1,8 +1,8 @@
 package states.editors.content;
 
+import flixel.util.FlxDestroyUtil;
 import objects.note.Note;
 import shaders.RGBPalette;
-import flixel.util.FlxDestroyUtil;
 
 enum abstract EventAnimAction(String) to String from String
 {
@@ -26,7 +26,7 @@ typedef EventAnimations =
   var ?removed_anim:EventAnimationData;
 }
 
-typedef EventJson =
+typedef ChartEventJson =
 {
   var ?animations:EventAnimations;
   var image:String;
@@ -35,23 +35,73 @@ typedef EventJson =
   var ?scale:Null<Float>;
 }
 
+class CombinedMetaNote extends MetaNote
+{
+  public function new(noteData:Int, data:Array<Dynamic>)
+  {
+    super(0, noteData, data);
+  }
+
+  public override function reloadNote(text:String = '', post:String = '')
+  {
+    super.reloadNote(text, post);
+    if (noteData < 0) loadGraphic(Paths.image('editors/chartEditor/events/eventIcon'));
+  }
+
+  override public function changeNoteData(v:Int)
+  {
+    this.chartNoteData = v; // despite being so arbitrary its sadly needed to fix a bug on moving notes
+    this.songData[1] = v;
+    this.noteData = v % ChartingState.GRID_COLUMNS_PER_PLAYER;
+    if (v >= 0)
+    {
+      this.texture = this.noteSkin;
+
+      loadNoteAnims(containsPixelTexture);
+
+      if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
+        rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
+
+      setShaderEnabled(PlayState.SONG.options.disableNoteRGB ? false : true);
+
+      animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'Scroll');
+      updateHitbox();
+      if (width > height) setGraphicSize(ChartingState.GRID_SIZE);
+      else
+        setGraphicSize(0, ChartingState.GRID_SIZE);
+
+      updateHitbox();
+    }
+    else
+    {
+      if (rgbShader != null) setShaderEnabled(false);
+      loadGraphic(Paths.image('editors/chartEditor/events/eventIcon'));
+      if (width > height) setGraphicSize(ChartingState.GRID_SIZE);
+      else
+        setGraphicSize(0, ChartingState.GRID_SIZE);
+      updateHitbox();
+    }
+  }
+}
+
 class MetaNote extends Note
 {
   public static var noteTypeTexts:Map<Int, FlxText> = [];
 
   public var isEvent:Bool = false;
   public var songData:Array<Dynamic>;
-  public var sustainSprite:Note;
+  public var sustainSprite:EditorSustain;
   public var endSprite:Note;
   public var chartY:Float = 0;
   public var chartNoteData:Int = 0;
+  public var oldXPos:Float = 0;
 
-  public function new(time:Float, data:Int, songData:Array<Dynamic>)
+  public function new(time:Float, nData:Int, songData:Array<Dynamic>)
   {
     super(
       {
         strumTime: time,
-        noteData: data,
+        noteData: nData,
         isSustainNote: false,
         noteSkin: PlayState.SONG?.options?.arrowSkin,
         prevNote: null,
@@ -62,65 +112,15 @@ class MetaNote extends Note
       });
     this.songData = songData;
     this.strumTime = time;
-    this.chartNoteData = data;
-
-    updateSustain();
-    updateSustainEnd();
+    this.chartNoteData = nData;
+    this.realNoteData = songData[1];
+    this.setStrumLineID(songData[4]);
   }
 
-  public function updateSustain(setData:Bool = true)
+  public override function reloadNote(tex:String = '', postfix:String = '')
   {
-    if (_lastEditorVisualSusLength <= 0) return;
-    if (sustainSprite != null)
-    {
-      if (setData)
-      {
-        sustainSprite.startNoteData(
-          {
-            strumTime: this.strumTime,
-            noteData: this.noteData,
-            isSustainNote: true,
-            noteSkin: this.noteSkin,
-            prevNote: null,
-            createdFrom: null,
-            scrollSpeed: 1.0,
-            parentStrumline: null,
-            inEditor: true
-          });
-      }
-      sustainSprite.rgbShader = this.rgbShader;
-      sustainSprite.scrollFactor.x = 0;
-      sustainSprite.animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'hold');
-      sustainSprite.setGraphicSize(ChartingState.GRID_SIZE * 0.5, _lastEditorVisualSusLength);
-      sustainSprite.updateHitbox();
-    }
-  }
-
-  public function updateSustainEnd(setData:Bool = true)
-  {
-    if (_lastEditorVisualSusLength <= 0) return;
-    if (endSprite != null)
-    {
-      if (setData)
-      {
-        endSprite.startNoteData(
-          {
-            strumTime: this.strumTime,
-            noteData: this.noteData,
-            isSustainNote: true,
-            noteSkin: this.noteSkin,
-            prevNote: null,
-            createdFrom: null,
-            scrollSpeed: 1.0,
-            parentStrumline: null,
-            inEditor: true
-          });
-      }
-      endSprite.scrollFactor.x = 0;
-      endSprite.animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'holdend');
-      endSprite.setGraphicSize(ChartingState.GRID_SIZE * 0.5, ChartingState.GRID_SIZE * 0.5);
-      endSprite.updateHitbox();
-    }
+    super.reloadNote(tex, postfix);
+    if (sustainSprite != null) sustainSprite.reloadNote(tex, postfix);
   }
 
   public function changeNoteData(v:Int)
@@ -128,12 +128,15 @@ class MetaNote extends Note
     this.chartNoteData = v; // despite being so arbitrary its sadly needed to fix a bug on moving notes
     this.songData[1] = v;
     this.noteData = v % ChartingState.GRID_COLUMNS_PER_PLAYER;
-    this.mustPress = (v < ChartingState.GRID_COLUMNS_PER_PLAYER);
+    this.realNoteData = v;
+    this.setStrumLineID((v < ChartingState.GRID_COLUMNS_PER_PLAYER) ? PlayState.SONG.strumLineIds[0] : PlayState.SONG.strumLineIds[1]);
 
     loadNoteAnims(containsPixelTexture);
 
     if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
       rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
+
+    setShaderEnabled((PlayState.SONG.options.disableNoteRGB || v <= -1) ? false : true);
 
     animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'Scroll');
     updateHitbox();
@@ -142,8 +145,14 @@ class MetaNote extends Note
       setGraphicSize(0, ChartingState.GRID_SIZE);
 
     updateHitbox();
-    updateSustain();
-    updateSustainEnd();
+    if (sustainSprite != null) sustainSprite.changeNoteData(this.noteData, this.noteSkin);
+  }
+
+  public function setStrumLineID(v:Int)
+  {
+    this.actualStrumLineID = songData[1] < ChartingState.GRID_COLUMNS_PER_PLAYER ? 0 : 1;
+    this.songData[4] = v;
+    this.strumLineID = v;
   }
 
   public function setStrumTime(v:Float)
@@ -163,40 +172,13 @@ class MetaNote extends Note
     v = Math.round(v / (stepCrochet / 2)) * (stepCrochet / 2);
     songData[2] = sustainLength = Math.max(Math.min(v, stepCrochet * 128), 0);
 
-    if (_lastEditorVisualSusLength > 0)
+    if (sustainLength > 0)
     {
-      if (sustainSprite == null)
-      {
-        sustainSprite = new Note(
-          {
-            strumTime: this.strumTime,
-            noteData: this.noteData,
-            isSustainNote: true,
-            noteSkin: this.noteSkin,
-            prevNote: null,
-            createdFrom: null,
-            scrollSpeed: 1.0,
-            parentStrumline: null,
-            inEditor: true
-          });
-      }
-      if (endSprite == null)
-      {
-        endSprite = new Note(
-          {
-            strumTime: this.strumTime,
-            noteData: this.noteData,
-            isSustainNote: true,
-            noteSkin: this.noteSkin,
-            prevNote: null,
-            createdFrom: null,
-            scrollSpeed: 1.0,
-            parentStrumline: null,
-            inEditor: true
-          });
-      }
-      updateSustain(false);
-      updateSustainEnd(false);
+      if (sustainSprite == null) sustainSprite = new EditorSustain(noteData, noteSkin);
+      sustainSprite.scrollFactor.x = 0;
+      sustainSprite.setGraphicSize(ChartingState.GRID_SIZE * 0.5, ChartingState.GRID_SIZE * 0.5);
+      sustainSprite.sustainHeight = _lastEditorVisualSusLength;
+      sustainSprite.updateHitbox();
     }
   }
 
@@ -245,17 +227,13 @@ class MetaNote extends Note
   {
     if (sustainSprite != null && sustainSprite.exists && sustainSprite.visible && sustainLength > 0)
     {
-      sustainSprite.x = this.x + this.width / 2 - sustainSprite.width / 2;
+      sustainSprite.setColorTransform(colorTransform.redMultiplier, sustainSprite.colorTransform.blueMultiplier, colorTransform.redMultiplier);
+      sustainSprite.setGraphicSize(ChartingState.GRID_SIZE * 0.5, ChartingState.GRID_SIZE * 0.5);
+      sustainSprite.updateHitbox();
+      sustainSprite.x = this.x + (this.width - sustainSprite.width) / 2;
       sustainSprite.y = this.y + this.height / 2;
       sustainSprite.alpha = this.alpha;
       sustainSprite.draw();
-    }
-    if (endSprite != null && endSprite.exists && endSprite.visible && sustainLength > 0)
-    {
-      endSprite.x = this.x + this.width / 2 - endSprite.width / 2;
-      endSprite.y = grabNoteY(endSprite, sustainSprite); // 4 pixels LOL
-      endSprite.alpha = this.alpha;
-      endSprite.draw();
     }
     super.draw();
 
@@ -268,60 +246,143 @@ class MetaNote extends Note
     }
   }
 
-  public function reloadToNewTexture(texture:String)
-  {
-    reloadNote(texture);
-    if (width > height) setGraphicSize(ChartingState.GRID_SIZE);
-    else
-      setGraphicSize(0, ChartingState.GRID_SIZE);
-
-    updateHitbox();
-
-    if (_lastEditorVisualSusLength > 0)
-    {
-      if (sustainSprite != null)
-      {
-        sustainSprite.reloadNote(texture);
-        updateSustain();
-      }
-      if (endSprite != null)
-      {
-        endSprite.reloadNote(texture);
-        updateSustainEnd();
-      }
-    }
-  }
-
   public function setShaderEnabled(isEnabled:Bool)
   {
     rgbShader.enabled = isEnabled;
     if (_lastEditorVisualSusLength > 0)
     {
-      if (endSprite != null)
-      {
-        endSprite.rgbShader.enabled = isEnabled;
-        updateSustainEnd();
-      }
-      if (sustainSprite != null)
-      {
-        sustainSprite.rgbShader.enabled = isEnabled;
-        updateSustain();
-      }
+      if (sustainSprite != null) sustainSprite.setShaderEnabled(isEnabled);
     }
-  }
-
-  public function grabNoteY(end:Note, sus:Note):Float
-  {
-    var diff:Float = (sus.y + sus.height) - 5;
-    if (end.y > diff) diff = (sus.y + (sus.height - end.y) - 5);
-    return diff;
   }
 
   override function destroy()
   {
     sustainSprite = FlxDestroyUtil.destroy(sustainSprite);
-    endSprite = FlxDestroyUtil.destroy(endSprite);
     super.destroy();
+  }
+}
+
+class EditorSustain extends Note
+{
+  public var sustainTile:EditorSustainHold;
+  public var sustainHeight(default, set):Float = 0;
+
+  function set_sustainHeight(value:Float):Float
+  {
+    sustainHeight = value;
+    sustainTile.setGraphicSize(ChartingState.GRID_SIZE * 0.5);
+    sustainTile.scale.y = sustainHeight;
+    return sustainHeight;
+  }
+
+  public function setShaderEnabled(enabled:Bool)
+  {
+    rgbShader.enabled = sustainTile.rgbShader.enabled = enabled;
+  }
+
+  public function new(nData:Int, skin:String)
+  {
+    sustainTile = new EditorSustainHold(nData, skin, sustainHeight);
+    sustainTile.scrollFactor.x = 0;
+    sustainTile.flipY = false;
+
+    super(
+      {
+        strumTime: 0,
+        noteData: nData,
+        isSustainNote: true,
+        noteSkin: skin
+      });
+
+    animation.play(Note.colArray[noteData] + 'holdend');
+    setGraphicSize(ChartingState.GRID_SIZE * 0.5, ChartingState.GRID_SIZE * 0.5);
+    updateHitbox();
+    flipY = false;
+  }
+
+  override function update(elapsed:Float)
+  {
+    sustainTile.update(elapsed);
+    super.update(elapsed);
+  }
+
+  override function draw()
+  {
+    if (!visible) return;
+
+    sustainTile.setColorTransform(colorTransform.redMultiplier, colorTransform.blueMultiplier, colorTransform.redMultiplier);
+    sustainTile.setGraphicSize(ChartingState.GRID_SIZE * 0.5);
+    sustainTile.scale.y = sustainHeight;
+    sustainTile.updateHitbox();
+    sustainTile.setPosition(this.x, this.y - sustainHeight);
+    sustainTile.alpha = this.alpha;
+    sustainTile.draw();
+
+    y += sustainHeight;
+    super.draw();
+    y -= sustainHeight;
+  }
+
+  public function reloadSustainTile()
+  {
+    sustainTile.antialiasing = this.antialiasing;
+    sustainTile.animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'hold');
+    sustainTile.clipRect = new flixel.math.FlxRect(0, 1, sustainTile.frameWidth, 1);
+  }
+
+  public function changeNoteData(v:Int, skin:String)
+  {
+    this.noteData = v;
+    this.texture = skin;
+
+    loadNoteAnims(containsPixelTexture);
+
+    if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
+      rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
+
+    setShaderEnabled((PlayState.SONG.options.disableNoteRGB || v <= -1) ? false : true);
+
+    sustainTile.changeNoteData(noteData, texture);
+    reloadSustainTile();
+    animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'holdend');
+  }
+
+  public override function reloadNote(tex:String = '', postfix:String = '')
+  {
+    super.reloadNote(tex, postfix);
+    sustainTile.reloadNote(tex, postfix);
+    reloadSustainTile();
+  }
+}
+
+class EditorSustainHold extends Note
+{
+  public function new(nData:Int, skin:String, height:Float)
+  {
+    super(
+      {
+        strumTime: 0,
+        noteData: nData,
+        isSustainNote: true,
+        noteSkin: skin
+      });
+    setGraphicSize(ChartingState.GRID_SIZE * 0.5);
+    scale.y = height;
+  }
+
+  public function changeNoteData(v:Int, skin:String)
+  {
+    this.noteData = v;
+    this.texture = skin;
+
+    loadNoteAnims(containsPixelTexture);
+
+    if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
+      rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
+
+    rgbShader.enabled = ((PlayState.SONG.options.disableNoteRGB || v <= -1) ? false : true);
+
+    animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'hold');
   }
 }
 
@@ -329,7 +390,7 @@ class EventMetaNote extends MetaNote
 {
   public var eventText:FlxText;
   public var eventDescription:String = "";
-  public var eventJson:EventJson = null;
+  public var eventJson:ChartEventJson = null;
 
   public function setImage(value:String):String
   {
@@ -438,7 +499,7 @@ class EventMetaNote extends MetaNote
     return finalEventText + valuesText;
   }
 
-  public function findEventJson(event:String):EventJson
+  public function findEventJson(event:String):ChartEventJson
   {
     if (Paths.fileExists('data/chart/events/$event.json', TEXT))
     {
@@ -448,7 +509,7 @@ class EventMetaNote extends MetaNote
         final rawJson = tjson.TJSON.parse(rawFile);
         if (rawJson != null)
         {
-          final newEventJson:EventJson =
+          final newEventJson:ChartEventJson =
             {
               animations: null,
               image: null,
@@ -482,7 +543,7 @@ class EventMetaNote extends MetaNote
       if (action.action == act && hasAnimation(action.anim.toLowerCase())) playAnim(action.anim.toLowerCase());
   }
 
-  public function loadFromJson(event:EventJson = null)
+  public function loadFromJson(event:ChartEventJson = null)
   {
     if (event == null) return;
     final imageFile:String = 'editors/chartEditor/events/' + event.image;

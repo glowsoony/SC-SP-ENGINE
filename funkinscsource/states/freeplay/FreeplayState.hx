@@ -53,10 +53,6 @@ class FreeplayState extends MusicBeatState
 
   public var curStringDifficulty:String = 'NORMAL';
 
-  #if HSCRIPT_ALLOWED
-  public var freeplayScript:psychlua.HScript;
-  #end
-
   var songs:Array<FreeplaySongMetaData> = [];
 
   var selector:FlxText;
@@ -123,17 +119,6 @@ class FreeplayState extends MusicBeatState
     #if DISCORD_ALLOWED
     // Updating Discord Rich Presence
     DiscordClient.changePresence('Searching to play song - Freeplay Menu', null);
-    #end
-
-    #if HSCRIPT_ALLOWED
-    /*freeplayScript = new psychlua.HScript(null, Paths.scriptsForHandler('FreeplayState'));
-      freeplayScript.set('FreeplayState', this);
-      freeplayScript.set('add', add);
-      freeplayScript.set('insert', insert);
-      freeplayScript.set('members', members);
-      freeplayScript.set('remove', remove);
-
-      freeplayScript.call('onCreate', []); */
     #end
 
     for (i in 0...WeekData.weeksList.length)
@@ -289,17 +274,10 @@ class FreeplayState extends MusicBeatState
     {
       playSong();
     }
-
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onCreatePost', []);
-      #end */
   }
 
   override function closeSubState()
   {
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onCloseSubState', []);
-      #end */
     changeSelection(0, false);
     opponentMode = ClientPrefs.getGameplaySetting('opponent');
     opponentText.text = "OPPONENT MODE: " + (opponentMode ? "ON" : "OFF");
@@ -345,10 +323,6 @@ class FreeplayState extends MusicBeatState
       super.update(elapsed);
       return;
     }
-
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onUpdate', [elapsed]);
-      #end */
 
     lerpScore = Math.floor(FlxMath.lerp(intendedScore, lerpScore, Math.exp(-elapsed * 24)));
     lerpAccuracy = FlxMath.lerp(intendedAccuracy, lerpAccuracy, Math.exp(-elapsed * 12));
@@ -650,9 +624,6 @@ class FreeplayState extends MusicBeatState
 
     if (canSelectSong) updateTexts(elapsed);
     super.update(elapsed);
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onUpdatePost', [elapsed]);
-      #end */
   }
 
   function tryLeaving(e:Alphabet, llll:Float = 0)
@@ -941,9 +912,6 @@ class FreeplayState extends MusicBeatState
   function changeDiff(change:Int = 0)
   {
     if (player.playingMusic) return;
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onChangeDiff', [change]);
-      #end */
     curDifficulty = FlxMath.wrap(curDifficulty + change, 0, Difficulty.list.length - 1);
 
     final songData = Highscore.getSongScore(songs[curSelected].songName, curDifficulty, opponentMode);
@@ -971,10 +939,6 @@ class FreeplayState extends MusicBeatState
       scorecolorDifficulty.exists(curStringDifficulty) ? scorecolorDifficulty.get(curStringDifficulty) : FlxColor.WHITE, {
         ease: FlxEase.quadInOut
       });
-
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onChangeDiffPost', [change]);
-      #end */
   }
 
   function changeSelection(change:Int = 0, playSound:Bool = true)
@@ -983,9 +947,6 @@ class FreeplayState extends MusicBeatState
 
     curSelected = FlxMath.wrap(curSelected + change, 0, songs.length - 1);
     _updateSongLastDifficulty();
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.call('onChangeSelection', [change, playSound]);
-      #end */
     if (playSound) FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
 
     var newColor:Int = songs[curSelected].color;
@@ -1098,12 +1059,6 @@ class FreeplayState extends MusicBeatState
   override function stepHit()
   {
     super.stepHit();
-
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.set('curStep', [curStep]);
-      freeplayScript.call('onStepHit');
-      freeplayScript.call('stepHit');
-      #end */
   }
 
   override function beatHit()
@@ -1125,12 +1080,6 @@ class FreeplayState extends MusicBeatState
       iconArray[i].iconBopSpeed = 1;
       iconArray[i].beatHit(curBeat);
     }
-
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.set('curBeat', [curBeat]);
-      freeplayScript.call('onBeatHit');
-      freeplayScript.call('beatHit');
-      #end */
   }
 
   override function sectionHit()
@@ -1144,12 +1093,6 @@ class FreeplayState extends MusicBeatState
         FlxG.camera.zoom += 0.03 / rate;
       }
     }
-
-    /*#if HSCRIPT_ALLOWED
-      freeplayScript.set('curSection', [curSection]);
-      freeplayScript.call('onSectionHit');
-      freeplayScript.call('sectionHit');
-      #end */
   }
 
   override function destroy()

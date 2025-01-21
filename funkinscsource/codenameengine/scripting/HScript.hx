@@ -36,7 +36,7 @@ class HScript extends Script
 
     try
     {
-      if (FileSystem.exists(rawPath)) code = sys.io.File.getContent(rawPath);
+      if (FileSystem.exists(rawPath)) code = File.getContent(rawPath);
     }
     catch (e)
       Debug.logError('Error while reading $path: ${Std.string(e)}');
@@ -88,9 +88,9 @@ class HScript extends Script
       var p = '$assetsPath.$hxExt';
       Debug.logInfo('What is the Archive name: ' + p);
       if (__importedPaths.contains(p)) return true; // no need to reimport again
-      if (sys.FileSystem.exists(p))
+      if (FileSystem.exists(p))
       {
-        var code = sys.io.File.getContent(p);
+        var code = File.getContent(p);
         var expr:Expr = null;
         try
         {

@@ -8,10 +8,6 @@ import flixel.tweens.FlxEase;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
 import openfl.utils.Assets;
-#if sys
-import sys.io.File;
-import sys.FileSystem;
-#end
 import flixel.system.ui.FlxSoundTray;
 
 /**

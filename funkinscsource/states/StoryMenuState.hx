@@ -372,8 +372,8 @@ class StoryMenuState extends MusicBeatState
         if (diffic == null) diffic = '';
 
         PlayState.storyDifficulty = curDifficulty;
-        PlayState.averageWeekScore = 0;
-        PlayState.averageWeekMisses = 0;
+        ComboStats.averageWeekScore = 0;
+        ComboStats.averageWeekMisses = 0;
 
         Song.loadFromJson(PlayState.storyPlaylist[0].toLowerCase() + diffic, PlayState.storyPlaylist[0].toLowerCase());
       }

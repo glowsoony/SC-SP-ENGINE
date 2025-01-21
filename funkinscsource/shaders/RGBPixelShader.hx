@@ -13,21 +13,18 @@ class RGBPixelShaderReference extends ShaderBase
   {
     if (tempShader != null)
     {
-      shader.setFloatArray('r', [
-        tempShader.shader.getFloatArray('r')[0],
-        tempShader.shader.getFloatArray('r')[1],
-        tempShader.shader.getFloatArray('r')[2]
-      ]);
-      shader.setFloatArray('g', [
-        tempShader.shader.getFloatArray('g')[0],
-        tempShader.shader.getFloatArray('g')[1],
-        tempShader.shader.getFloatArray('g')[2]
-      ]);
-      shader.setFloatArray('b', [
-        tempShader.shader.getFloatArray('b')[0],
-        tempShader.shader.getFloatArray('b')[1],
-        tempShader.shader.getFloatArray('b')[2]
-      ]);
+      var rA:Array<Float> = [];
+      var gA:Array<Float> = [];
+      var bA:Array<Float> = [];
+      for (i in 0...3)
+      {
+        rA.push(tempShader.shader.getFloatArray('r')[i]);
+        gA.push(tempShader.shader.getFloatArray('g')[i]);
+        bA.push(tempShader.shader.getFloatArray('b')[i]);
+      }
+      shader.setFloatArray('r', rA);
+      shader.setFloatArray('g', gA);
+      shader.setFloatArray('b', bA);
       shader.setFloat('mult', tempShader.shader.getFloat('mult'));
     }
     else

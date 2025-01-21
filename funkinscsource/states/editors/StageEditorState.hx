@@ -110,7 +110,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
   {
     var directory:String = 'shared';
     var weekDir:String = stageJson.directory;
-    if (weekDir != null && weekDir.length > 0 && weekDir != '') directory = weekDir;
+    if (weekDir != null && weekDir != '') directory = weekDir;
 
     Paths.setCurrentLevel(directory);
     Debug.logInfo('Setting asset folder to ' + directory);
@@ -120,11 +120,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
   function addHelpScreen()
   {
-    #if FLX_DEBUG
-    var btn = 'F3';
-    #else
-    var btn = 'F2';
-    #end
+    var btn = #if FLX_DEBUG 'F3' #else 'F2' #end;
 
     var str:String = '
 		E/Q - Camera Zoom In/Out
@@ -1525,8 +1521,8 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
     @:privateAccess
     var lineSize:Int = Std.int(Math.max(2, Math.floor(3 / FlxG.camera.zoom)));
 
-    var sprX:Float = spr.x + spr.offset.x;
-    var sprY:Float = spr.y + spr.offset.y;
+    var sprX:Float = spr.x - spr.offset.x;
+    var sprY:Float = spr.y - spr.offset.y;
     var sprWidth:Int = Std.int(spr.frameWidth * spr.scale.x);
     var sprHeight:Int = Std.int(spr.frameHeight * spr.scale.y);
     for (num => sel in selectionSprites.members)

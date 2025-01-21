@@ -31,8 +31,8 @@ class FlxMenuSprite extends FlxSprite
 
 class MainMenuState extends MusicBeatState
 {
-  public static final psychEngineVersion:String = '1.0-prerelease'; // This is also used for Discord RPC
-  public static var SCEVersion:String = '1.5.2'; // This is also used for Discord RPC
+  public static final psychEngineVersion:String = '1.0.1'; // This is also used for Discord RPC
+  public static var SCEVersion:String = '1.5.3'; // This is also used for Discord RPC
   public static var curSelected:Int = 0;
   public static var curColumn:MainMenuColumn = CENTER;
 
@@ -54,12 +54,11 @@ class MainMenuState extends MusicBeatState
 
   var bg:FlxSprite;
   var camFollow:FlxObject;
+  var camFollowPos:FlxObject;
 
   public static var freakyPlaying:Bool = false;
 
   var grid:FlxBackdrop;
-
-  var camFollowPos:FlxObject;
 
   override function create()
   {
@@ -130,12 +129,6 @@ class MainMenuState extends MusicBeatState
     }
 
     if (leftOption != null) leftItem = createMenuItem(leftOption, 60, 490, true);
-
-    final checkBoxText:PsychUICheckBoxTest = new PsychUICheckBoxTest(rightItem.x, rightItem.y - 200, 'Grid Visible?', 100, () -> {
-      grid.visible = !grid.visible;
-    });
-    checkBoxText.scrollFactor.set();
-    add(checkBoxText);
 
     final sceVersion:FlxText = new FlxText(12, FlxG.height - 64, 0, "SCE v" + SCEVersion, 16);
     sceVersion.active = false;
@@ -401,8 +394,8 @@ class MainMenuState extends MusicBeatState
               case 'credits':
                 MusicBeatState.switchState(new CreditsState());
               case 'options':
-                MusicBeatState.switchState(new OptionsDirect());
-                // OptionsState.onPlayState = false;
+                MusicBeatState.switchState(new OptionsState());
+                OptionsState.onPlayState = false;
                 if (PlayState.SONG != null)
                 {
                   PlayState.SONG.options.arrowSkin = null;
@@ -437,7 +430,6 @@ class MainMenuState extends MusicBeatState
     for (memb in menuItems)
     {
       if (memb == selectedItem) continue;
-      // FlxTween.tween(FlxG.camera, {zoom: FlxG.camera.zoom + 0.2}, 0.6, {ease: utils.EaseUtil.pop});
       switch (chosen)
       {
         case 'story_mode':

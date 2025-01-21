@@ -10,19 +10,17 @@ import flixel.system.FlxAssets.FlxGraphicAsset;
 import flixel.system.FlxAssets.FlxShader;
 import flixel.graphics.tile.FlxDrawTrianglesItem;
 import backend.NoteTypesConfig;
+import backend.NoteTypeConfigJson;
 import backend.Rating;
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
 import openfl.Assets;
 import utils.tools.ICloneable;
-#if SCEModchartingTools
-import modcharting.NotePositionData;
-import modcharting.SustainStrip;
-#end
 import openfl.display.TriangleCulling;
 import openfl.geom.Vector3D;
 import openfl.geom.ColorTransform;
 import lime.math.Vector2;
+import objects.note.NoteSplash.NoteSplashData;
 
 using StringTools;
 
@@ -40,19 +38,6 @@ typedef NoteSpriteStartData =
   ?inEditor:Bool
 }
 
-typedef NoteSplashData =
-{
-  disabled:Bool,
-  texture:String,
-  useGlobalShader:Bool, // breaks r/g/b/a but makes it copy default colors for your custom note
-  useRGBShader:Bool,
-  antialiasing:Bool,
-  a:Float,
-  ?r:FlxColor,
-  ?g:FlxColor,
-  ?b:FlxColor
-}
-
 typedef EventNote =
 {
   var time:Float;
@@ -65,18 +50,8 @@ typedef EventNote =
  *
  * If you want to make a custom note type, you should search for: "function set_noteType"
 **/
-class Note extends ModchartArrow implements ICloneable<Note>
+class Note extends FunkinSCSprite implements ICloneable<Note>
 {
-  // Modcharting Stuff ---->
-  // Galxay stuff
-  private static var alphas:Map<String, Map<String, Map<Int, Array<Float>>>> = new Map();
-  private static var indexes:Map<String, Map<String, Map<Int, Array<Int>>>> = new Map();
-  private static var glist:Array<FlxGraphic> = [];
-
-  public var gpix:FlxGraphic = null;
-  public var oalp:Float = 1;
-  public var oanim:String = "";
-
   // <----
   public static var globalRgbShaders:Array<RGBPalette> = [];
   public static var globalQuantRgbShaders:Array<RGBPalette> = [];
@@ -95,15 +70,10 @@ class Note extends ModchartArrow implements ICloneable<Note>
     'No Animation'
   ];
 
-  #if SCEModchartingTools
-  public var mesh:SustainStrip;
-  public var notePositionData:NotePositionData = NotePositionData.get();
-  #end
-
   // We can now edit the time they spawn, useful for Modifiers (MT and non-MT)
   public var spawnTime:Float = 2000;
 
-  public var holdNote:SustainTrail;
+  //  public var holdNote:SustainTrail;
   public var eventNote:EventNote;
 
   public var eventLength:Int = 0;
@@ -111,13 +81,11 @@ class Note extends ModchartArrow implements ICloneable<Note>
   public var eventTime:Float = 0.0;
   public var params:Array<String> = [];
 
-  public var extraData:Map<String, Dynamic> = new Map<String, Dynamic>();
-
   public var strumTime:Float = 0;
   public var noteData:Int = 0;
-  public var strumLine:Int = 0;
+  public var strumLineID:Int = 0;
+  public var actualStrumLineID:Int = 0;
 
-  public var mustPress:Bool = false;
   public var canBeHit:Bool = false;
   public var tooLate:Bool = false;
 
@@ -159,6 +127,8 @@ class Note extends ModchartArrow implements ICloneable<Note>
   public static var colArray:Array<String> = ['purple', 'blue', 'green', 'red'];
   public static var defaultNoteSkin(default, never):String = 'noteSkins/NOTE_assets';
 
+  public var bpm:Float = Conductor.bpm;
+
   public var noteSplashData:NoteSplashData =
     {
       disabled: false,
@@ -166,6 +136,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
       antialiasing: !PlayState.isPixelStage,
       useGlobalShader: false,
       useRGBShader: (PlayState.SONG != null) ? !(PlayState.SONG.options.disableSplashRGB == true) : true,
+      useNoteRGB: true,
       a: ClientPrefs.data.splashAlpha,
       r: -1,
       g: -1,
@@ -214,6 +185,16 @@ class Note extends ModchartArrow implements ICloneable<Note>
   }
 
   public var hitsound(default, set):String = 'hitsound';
+
+  public var noteStrumID(get, never):Int;
+
+  function get_noteStrumID():Int
+  {
+    if (parentStrumline == null) return noteData;
+    var id = noteData % parentStrumline.members.length;
+    if (id < 0) id = 0;
+    return id;
+  }
 
   function set_hitsound(value:String):String
   {
@@ -284,9 +265,6 @@ class Note extends ModchartArrow implements ICloneable<Note>
 
   public dynamic function defaultRGB()
   {
-    var noteData:Int = noteData;
-    if (noteData > 3) noteData = noteData % 4;
-
     var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[noteData];
     if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture) arr = ClientPrefs.data.arrowRGBPixel[noteData];
 
@@ -304,9 +282,8 @@ class Note extends ModchartArrow implements ICloneable<Note>
     }
   }
 
-  public dynamic function defaultRGBQuant()
+  public dynamic function defaultRGBQuant(limit:Bool = true)
   {
-    var noteData:Int = noteData;
     var arrQuantRGB:Array<FlxColor> = ClientPrefs.data.arrowRGBQuantize[noteData];
 
     if (arrQuantRGB != null && noteData > -1 && noteData <= arrQuantRGB.length)
@@ -325,8 +302,6 @@ class Note extends ModchartArrow implements ICloneable<Note>
 
   private function set_noteType(value:String):String
   {
-    // var skin:String = 'noteSplashes';
-    // if (PlayState.SONG != null && PlayState.SONG.options.splashSkin != "") skin = PlayState.SONG.options.splashSkin;
     customColoredNotes ? defaultRGBQuant() : defaultRGB();
 
     if (noteData > -1 && noteType != value)
@@ -368,13 +343,18 @@ class Note extends ModchartArrow implements ICloneable<Note>
         case 'Mom Sing':
           momNote = true;
       }
-      if (value != null && value.length > 1) NoteTypesConfig.applyNoteTypeData(this, value);
+      if (value != null && value.length > 1)
+      {
+        NoteTypesConfig.applyNoteTypeData(this, value);
+        NoteTypeConfigJson.applyNoteTypeJson(this, value);
+      }
       if (hitsound != 'hitsound' && ClientPrefs.data.hitsoundVolume > 0) Paths.sound(hitsound); // precache new sound for being idiot-proof
       noteType = value;
     }
     return value;
   }
 
+  public var realNoteData:Int = 0;
   public var parentStrumline:StrumLine;
 
   // Used in-game to control the scroll speed within a song
@@ -384,16 +364,19 @@ class Note extends ModchartArrow implements ICloneable<Note>
 
   public var allowDeleteAndMiss:Bool = true;
   public var allowStrumFollow:Bool = true;
-  public var allowNotesToHit:Bool = true;
+  public var allowNoteToHit:Bool = true;
+
+  public var noteSpriteData:NoteSpriteStartData;
 
   public function new(data:NoteSpriteStartData)
   {
     super();
 
+    this.noteSpriteData = data;
     antialiasing = ClientPrefs.data.antialiasing;
     this.moves = false;
 
-    x += (ClientPrefs.data.middleScroll ? PlayState.STRUM_X_MIDDLESCROLL : PlayState.STRUM_X) + 50;
+    x += (ClientPrefs.data.middleScroll ? StrumLine.STRUM_X_MIDDLESCROLL : StrumLine.STRUM_X) + 50;
     // MAKE SURE ITS DEFINITELY OFF SCREEN?
     y -= 2000;
 
@@ -402,6 +385,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
 
   public dynamic function startNoteData(data:NoteSpriteStartData)
   {
+    this.noteSpriteData = data;
     if (data.createdFrom == null) data.createdFrom = PlayState.instance;
     if (data.prevNote == null) data.prevNote = this;
 
@@ -423,7 +407,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
       texture = data.noteSkin;
       if (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB) rgbShader.enabled = false;
 
-      x += swagWidth * (data.noteData);
+      x += swagWidth * data.noteData;
       if (!isSustainNote && noteData < colArray.length)
       { // Doing this 'if' check to fix the warnings on Senpai songs
         var animToPlay:String = '';
@@ -485,10 +469,10 @@ class Note extends ModchartArrow implements ICloneable<Note>
     x += offsetX;
   }
 
-  public dynamic function setupNote(mustPress:Bool, strumLine:Int, daSection:Int, noteType:String)
+  public dynamic function setupNote(strumLineID:Int, actualID:Int, daSection:Int, noteType:String)
   {
-    this.mustPress = mustPress;
-    this.strumLine = strumLine;
+    this.strumLineID = strumLineID;
+    this.actualStrumLineID = actualID;
     this.noteSection = daSection;
     this.noteType = noteType;
   }
@@ -548,7 +532,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
   public var originalHeight:Float = 6;
   public var correctionOffset:Float = 0; // dont mess with this
 
-  public dynamic function reloadNote(noteStyle:String = '', postfix:String = '')
+  public function reloadNote(noteStyle:String = '', postfix:String = '')
   {
     if (noteStyle == null) noteStyle = '';
     if (postfix == null) postfix = '';
@@ -597,6 +581,9 @@ class Note extends ModchartArrow implements ICloneable<Note>
   {
     var firstPathFound:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/notes/$noteStyleType.png')) || #end Assets.exists(Paths.getPath('images/notes/$noteStyleType.png'));
     var secondPathFound:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/$noteStyleType.png')) || #end Assets.exists(Paths.getPath('images/$noteStyleType.png'));
+    var pixelSusPath:String = "";
+    var pixelPath:String = "";
+    var notePath:String = "";
     switch (noteType)
     {
       default:
@@ -608,52 +595,32 @@ class Note extends ModchartArrow implements ICloneable<Note>
             {
               if (firstPathFound)
               {
-                if (isSustainNote)
-                {
-                  var graphic = Paths.image(noteStyleType != "" ? 'notes/' + noteStyleType + 'ENDS' : ('pixelUI/' + skinPixel + 'ENDS' + skinPostfix),
-                    notePathLib, !notITGNotes);
-                  loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
-                  originalHeight = graphic.height / 2;
-                }
-                else
-                {
-                  var graphic = Paths.image(noteStyleType != "" ? 'notes/' + noteStyleType : ('pixelUI/' + skinPixel + skinPostfix), notePathLib, !notITGNotes);
-                  loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 5));
-                }
-
-                loadNoteAnims(true);
+                pixelSusPath = noteStyleType != "" ? 'notes/' + noteStyleType + 'ENDS' : ('pixelUI/' + skinPixel + 'ENDS' + skinPostfix);
+                pixelPath = noteStyleType != "" ? 'notes/' + noteStyleType : ('pixelUI/' + skinPixel + skinPostfix);
               }
               else if (secondPathFound)
               {
-                if (isSustainNote)
-                {
-                  var graphic = Paths.image(noteStyleType != "" ? noteStyleType + 'ENDS' : ('pixelUI/' + skinPixel + 'ENDS' + skinPostfix), notePathLib,
-                    !notITGNotes);
-                  loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
-                  originalHeight = graphic.height / 2;
-                }
-                else
-                {
-                  var graphic = Paths.image(noteStyleType != "" ? noteStyleType : ('pixelUI/' + skinPixel + skinPostfix), notePathLib, !notITGNotes);
-                  loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 5));
-                }
-
-                loadNoteAnims(true);
+                pixelSusPath = noteStyleType != "" ? noteStyleType + 'ENDS' : ('pixelUI/' + skinPixel + 'ENDS' + skinPostfix);
+                pixelPath = noteStyleType != "" ? noteStyleType : ('pixelUI/' + skinPixel + skinPostfix);
               }
               else
               {
                 var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB);
+                pixelSusPath = noteSkinNonRGB ? 'pixelUI/NOTE_assetsENDS' : 'pixelUI/noteSkins/NOTE_assetsENDS' + getNoteSkinPostfix();
+                pixelPath = noteSkinNonRGB ? 'pixelUI/NOTE_assets' : 'pixelUI/noteSkins/NOTE_assets' + getNoteSkinPostfix();
+              }
+
+              if (pixelSusPath.length > 0 && pixelPath.length > 0)
+              {
                 if (isSustainNote)
                 {
-                  var graphic = Paths.image(noteSkinNonRGB ? 'pixelUI/NOTE_assetsENDS' : 'pixelUI/noteSkins/NOTE_assetsENDS' + getNoteSkinPostfix(),
-                    notePathLib, !notITGNotes);
+                  var graphic = Paths.image(pixelSusPath, notePathLib, !notITGNotes);
                   loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
                   originalHeight = graphic.height / 2;
                 }
                 else
                 {
-                  var graphic = Paths.image(noteSkinNonRGB ? 'pixelUI/NOTE_assets' : 'pixelUI/noteSkins/NOTE_assets' + getNoteSkinPostfix(), notePathLib,
-                    !notITGNotes);
+                  var graphic = Paths.image(pixelPath, notePathLib, !notITGNotes);
                   loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 5));
                 }
 
@@ -662,20 +629,17 @@ class Note extends ModchartArrow implements ICloneable<Note>
             }
             else
             {
-              if (firstPathFound)
-              {
-                frames = Paths.getSparrowAtlas('notes/' + noteStyleType, notePathLib, !notITGNotes);
-                loadNoteAnims();
-              }
-              else if (secondPathFound)
-              {
-                frames = Paths.getSparrowAtlas(noteStyleType, notePathLib, !notITGNotes);
-                loadNoteAnims();
-              }
+              if (firstPathFound) notePath = 'notes/' + noteStyleType;
+              else if (secondPathFound) notePath = noteStyleType;
               else
               {
                 var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB);
-                frames = Paths.getSparrowAtlas(noteSkinNonRGB ? "NOTE_assets" : "noteSkins/NOTE_assets" + getNoteSkinPostfix(), notePathLib, !notITGNotes);
+                notePath = noteSkinNonRGB ? "NOTE_assets" : "noteSkins/NOTE_assets" + getNoteSkinPostfix();
+              }
+
+              if (notePath.length > 0)
+              {
+                frames = Paths.getSparrowAtlas(notePath, notePathLib, !notITGNotes);
                 loadNoteAnims();
               }
             }
@@ -752,25 +716,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
   override function update(elapsed:Float)
   {
     super.update(elapsed);
-    daOffsetX = offsetX; // adjust modchart notes offset
     containsPixelTexture = ((texture.contains('pixel') || noteSkin.contains('pixel')) && !containsPixelTexture);
-
-    if (mustPress)
-    {
-      canBeHit = (strumTime > Conductor.songPosition - (Conductor.safeZoneOffset * lateHitMult)
-        && strumTime < Conductor.songPosition + (Conductor.safeZoneOffset * earlyHitMult));
-
-      if (strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !wasGoodHit) tooLate = true;
-    }
-    else
-    {
-      canBeHit = false;
-
-      if (!wasGoodHit && strumTime <= Conductor.songPosition)
-      {
-        if (!isSustainNote || (prevNote.wasGoodHit && !ignoreNote)) wasGoodHit = true;
-      }
-    }
   }
 
   public dynamic function followStrumArrow(myStrum:StrumArrow, pitch:Float = 1)
@@ -812,10 +758,12 @@ class Note extends ModchartArrow implements ICloneable<Note>
     if (copyVisible) visible = strumVisible;
   }
 
+  public var clipToStrum:Bool = false;
+
   public dynamic function clipToStrumArrow(myStrum:StrumArrow)
   {
     var center:Float = myStrum.y + offsetY + swagWidth / 2;
-    if ((mustPress || !ignoreNote) && (wasGoodHit || (prevNote.wasGoodHit && !canBeHit)))
+    if ((clipToStrum || !ignoreNote) && (wasGoodHit || (prevNote.wasGoodHit && !canBeHit)))
     {
       var swagRect:FlxRect = clipRect;
       if (swagRect == null) swagRect = new FlxRect(0, 0, frameWidth, frameHeight);
@@ -839,6 +787,12 @@ class Note extends ModchartArrow implements ICloneable<Note>
     }
   }
 
+  public function validTime(rate:Float = 1, ?ignoreMultSpeed:Bool = false):Bool
+  {
+    final time:Float = (spawnTime * rate) / (noteScrollSpeed < 1 ? noteScrollSpeed : 1) / (!ignoreMultSpeed && multSpeed < 1 ? multSpeed : 1);
+    return (strumTime - Conductor.songPosition < time);
+  }
+
   @:access(flixel.FlxCamera)
   override public function draw():Void
   {
@@ -847,118 +801,7 @@ class Note extends ModchartArrow implements ICloneable<Note>
       if (alpha > 0.3) alpha = 0.3;
     }
 
-    if (notITGNotes && drawManual)
-    {
-      if (alpha < 0 || vertices == null || indices == null || uvtData == null || _point == null || offset == null)
-      {
-        return;
-      }
-
-      for (camera in cameras)
-      {
-        if (!camera.visible || !camera.exists) continue;
-        // if (!isOnScreen(camera)) continue; // TODO: Update this code to make it work properly.
-
-        // memory leak with drawTriangles :c
-
-        getScreenPosition(_point, camera) /*.subtractPoint(offset)*/;
-        var newGraphic:FlxGraphic = cast mapData();
-
-        var shader = this.shader != null ? this.shader : new FlxShader();
-        if (this.shader != shader) this.shader = shader;
-
-        shader.bitmap.input = graphic.bitmap;
-        shader.bitmap.filter = antialiasing ? LINEAR : NEAREST;
-
-        var transforms:Array<ColorTransform> = [];
-        var transfarm:ColorTransform = new ColorTransform();
-        transfarm.redMultiplier = colorTransform.redMultiplier;
-        transfarm.greenMultiplier = colorTransform.greenMultiplier;
-        transfarm.blueMultiplier = colorTransform.blueMultiplier;
-        transfarm.redOffset = colorTransform.redOffset;
-        transfarm.greenOffset = colorTransform.greenOffset;
-        transfarm.blueOffset = colorTransform.blueOffset;
-        transfarm.alphaOffset = colorTransform.alphaOffset;
-        transfarm.alphaMultiplier = colorTransform.alphaMultiplier * camera.alpha;
-
-        for (n in 0...vertices.length)
-          transforms.push(transfarm);
-
-        var drawItem = camera.startTrianglesBatch(newGraphic, antialiasing, true, blend, true, shader);
-
-        @:privateAccess
-        {
-          drawItem.addTrianglesColorArray(vertices, indices, uvtData, null, _point, camera._bounds, transforms);
-        }
-
-        // camera.drawTriangles(newGraphic, vertices, indices, uvtData, null, _point, blend, true, antialiasing, colorTransform, shader);
-        // camera.drawTriangles(processedGraphic, vertices, indices, uvtData, null, _point, blend, true, antialiasing);
-        // trace("we do be drawin... something?\n verts: \n" + vertices);
-      }
-
-      // trace("we do be drawin tho");
-
-      #if FLX_DEBUG
-      if (FlxG.debugger.drawDebug) drawDebug();
-      #end
-    }
-    else
-    {
-      super.draw();
-    }
-  }
-
-  public function mapData():FlxGraphic
-  {
-    if (gpix == null || alpha != oalp || !animation.curAnim.finished || oanim != animation.curAnim.name)
-    {
-      if (!alphas.exists(noteType))
-      {
-        alphas.set(noteType, new Map());
-        indexes.set(noteType, new Map());
-      }
-      if (!alphas.get(noteType).exists(animation.curAnim.name))
-      {
-        alphas.get(noteType).set(animation.curAnim.name, new Map());
-        indexes.get(noteType).set(animation.curAnim.name, new Map());
-      }
-      if (!alphas.get(noteType).get(animation.curAnim.name).exists(animation.curAnim.curFrame))
-      {
-        alphas.get(noteType).get(animation.curAnim.name).set(animation.curAnim.curFrame, []);
-        indexes.get(noteType).get(animation.curAnim.name).set(animation.curAnim.curFrame, []);
-      }
-      if (!alphas.get(noteType)
-        .get(animation.curAnim.name)
-        .get(animation.curAnim.curFrame)
-        .contains(alpha))
-      {
-        var pix:FlxGraphic = FlxGraphic.fromFrame(frame, true);
-        var nalp:Array<Float> = alphas.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame);
-        var nindex:Array<Int> = indexes.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame);
-        pix.bitmap.colorTransform(pix.bitmap.rect, colorTransform);
-        glist.push(pix);
-        nalp.push(alpha);
-        nindex.push(glist.length - 1);
-        alphas.get(noteType).get(animation.curAnim.name).set(animation.curAnim.curFrame, nalp);
-        indexes.get(noteType).get(animation.curAnim.name).set(animation.curAnim.curFrame, nindex);
-      }
-      var dex = alphas.get(noteType)
-        .get(animation.curAnim.name)
-        .get(animation.curAnim.curFrame)
-        .indexOf(alpha);
-      gpix = glist[
-        indexes.get(noteType).get(animation.curAnim.name).get(animation.curAnim.curFrame)[dex]
-      ];
-      oalp = alpha;
-      oanim = animation.curAnim.name;
-    }
-    return gpix;
-  }
-
-  public function validTime(rate:Float = 1, ?ignoreMultSpeed:Bool = false):Bool
-  {
-    final time:Float = (spawnTime * rate) / (noteScrollSpeed < 1 ? noteScrollSpeed : 1) / (!ignoreMultSpeed && multSpeed < 1 ? multSpeed : 1);
-    return (strumTime - Conductor.songPosition < time);
+    super.draw();
   }
 
   @:noCompletion
@@ -991,16 +834,6 @@ class Note extends ModchartArrow implements ICloneable<Note>
   {
     clipRect = flixel.util.FlxDestroyUtil.put(clipRect);
     _lastValidChecked = '';
-    vertices = null;
-    indices = null;
-    uvtData = null;
-    for (i in glist)
-      i.destroy();
-    alphas = new Map();
-    indexes = new Map();
-    glist = [];
-    hasSetupRender = false;
-    drawManual = false;
     super.destroy();
   }
 

@@ -708,8 +708,7 @@ class PsychUINoteColors extends FlxSpriteGroup
       myNotes.add(newNote);
     }
 
-    bigNote = new Note(
-      {
+    bigNote = new Note({
         strumTime: 0,
         noteData: 0,
         isSustainNote: false,

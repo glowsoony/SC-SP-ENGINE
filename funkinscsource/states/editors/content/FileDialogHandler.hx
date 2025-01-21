@@ -5,7 +5,6 @@ import openfl.events.Event;
 import openfl.events.IOErrorEvent;
 import openfl.net.FileFilter;
 import haxe.Exception;
-import sys.io.File;
 import flixel.FlxBasic;
 import lime.ui.*;
 

@@ -2,6 +2,7 @@ package utils;
 
 import utils.tools.FloatTools;
 import haxe.Timer;
+import flixel.util.FlxTimer.FlxTimerManager;
 
 class TimerUtil
 {
@@ -45,5 +46,12 @@ class TimerUtil
   {
     var seconds:Float = took(start, end);
     return '${seconds * 1000} ms';
+  }
+
+  public static function createTimer(manager:FlxTimerManager, Time:Float = 1, ?OnComplete:FlxTimer->Void, Loops:Int = 1):FlxTimer
+  {
+    var timer:FlxTimer = new FlxTimer();
+    timer.manager = manager;
+    return timer.start(Time, OnComplete, Loops);
   }
 }

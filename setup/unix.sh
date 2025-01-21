@@ -5,7 +5,7 @@
 # https://haxe.org/download/version/4.3.6/
 haxelib install lime
 haxelib install openfl
-haxelib git flixel https://github.com/glowsoony/flixel/tree/Main-SCE
+haxelib git flixel https://github.com/glowsoony/flixel/tree/main
 haxelib git flixel-addons https://github.com/glowsoony/flixel-addons/tree/dev
 haxelib install tjson
 haxelib install flixel-tools

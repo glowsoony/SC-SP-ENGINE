@@ -3,203 +3,224 @@ package options;
 import flixel.FlxSubState;
 import states.editors.content.Prompt;
 import states.editors.content.*;
+import options.ui.*;
+import utils.GeneralUtils;
 
-// Work in progress
-
-enum OptionTypes
+enum abstract BuildOption(String) to String from String
 {
-  INT;
-  FLOAT;
-  KEYBIND;
-  STRING;
-  LINK;
-  ARRAY;
+  var TOGGLE = "Toggle";
+  var ARRAY = "Array";
+  var SHIFT = "Shift";
+  var DROPDOWN = "DropDown";
+  var KEYBIND = "KeyBind";
+  var SLIDER = "Slider";
+  var NUMBER = "Number";
 }
 
-class OptionsMenu extends MusicBeatSubState implements PsychUIEventHandler.PsychUIEvent
+class OptionCategoryHeader extends FlxSpriteGroup
 {
-  public static var isInPause:Bool = false;
+  public var categorys:Array<String> = [];
+  public var curSelectedCata:Int = 0;
 
-  public var window:PsychUIWindow = null;
-  public var box:PsychUIBox = null;
-  public var noteKeyBox:PsychUIBox = null;
+  public var currentCata:{cata:String, cataNum:Int};
 
-  public var fileDialog:FileDialogHandler = new FileDialogHandler();
+  public var background:FlxSprite;
+  public var category:FlxText;
 
-  public function new()
+  public var leftArrow:UIArrow;
+  public var rightArrow:UIArrow;
+
+  public function new(x:Float, y:Float, cates:Array<String>)
   {
+    this.categorys = cates;
+    super(x, y);
+    background = new FlxSprite(20, 40).makeGraphic(1240, 70, FlxColor.BLACK);
+    background.alpha = 0.5;
+    add(background);
+    category = new FlxText(background.x + 460, 40, background.width / 2, "", 50);
+    add(category);
+    leftArrow = new UIArrow(category.x - 75, category.y - 13);
+    GeneralUtils.transformSpriteColor(leftArrow.arrow, [0, 0, 0, 1, 0, 0, 0]);
+    leftArrow.flipX = true;
+    add(leftArrow);
+
+    rightArrow = new UIArrow(0, category.y - 13);
+    GeneralUtils.transformSpriteColor(rightArrow.arrow, [0, 0, 0, 1, 0, 0, 0]);
+    add(rightArrow);
+
+    rightArrow.onPressed = function() {
+      GeneralUtils.transformSpriteColor(rightArrow.arrow, [1, 1, 1, 1, 255, 255, 0]);
+    }
+    leftArrow.onPressed = function() {
+      GeneralUtils.transformSpriteColor(leftArrow.arrow, [1, 1, 1, 1, 255, 255, 0]);
+    }
+
+    background.antialiasing = category.antialiasing = ClientPrefs.data.antialiasing;
+    onChangeCata();
+  }
+
+  public var yellowTimerL:FlxTimer;
+  public var yellowTimerR:FlxTimer;
+
+  public function onChangeCata(change:Int = 0)
+  {
+    curSelectedCata = FlxMath.wrap(curSelectedCata + change, 0, categorys.length - 1);
+    category.text = categorys[curSelectedCata];
+    currentCata =
+      {
+        cata: category.text,
+        cataNum: curSelectedCata
+      }
+    switch (categorys[curSelectedCata])
+    {
+      case 'Gameplay':
+        rightArrow.x = category.x + 270;
+      case 'Misc':
+        rightArrow.x = category.x + 100;
+      case 'Appearance':
+        rightArrow.x = category.x + 330;
+      case 'Visuals':
+        rightArrow.x = category.x + 190;
+    }
+    FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
+    callWhiteTimerL();
+    callWhiteTimerR();
+  }
+
+  public function callWhiteTimerL():Void
+  {
+    if (leftArrow.arrow.colorTransform.blueOffset == 255) return;
+    yellowTimerL = new FlxTimer().start(0.06, function(tmr) {
+      GeneralUtils.transformSpriteColor(leftArrow.arrow, [1, 1, 1, 1, 255, 255, 255]);
+      yellowTimerL = null;
+    });
+  }
+
+  public function callWhiteTimerR():Void
+  {
+    if (rightArrow.arrow.colorTransform.blueOffset == 255) return;
+    yellowTimerR = new FlxTimer().start(0.06, function(tmr) {
+      GeneralUtils.transformSpriteColor(rightArrow.arrow, [1, 1, 1, 1, 255, 255, 255]);
+      yellowTimerR = null;
+    });
+  }
+}
+
+class OptionsBody extends FlxSpriteGroup
+{
+  public var toggles:Map<String, UIToggle> = [];
+  public var background:FlxSprite;
+
+  public function new(x:Float, y:Float)
+  {
+    super(x, y);
+    background = new FlxSprite(40, 120).makeGraphic(1240, 570, FlxColor.BLACK);
+    background.alpha = 0.5;
+    add(background);
+  }
+}
+
+// Work in progress
+class OptionsMenu extends MusicBeatSubState
+{
+  public var header:OptionCategoryHeader;
+  public var body:OptionsBody;
+  public var camMain:FlxCamera;
+  public var optionsCam:FlxCamera;
+
+  public var options:Map<String, Array<String>> = ["Gameplay" => [], "Visual" => [], "Appearance" => [], "Misc" => []];
+
+  public var buildOptionObjects:Map<String, BuildOption> = [];
+
+  public var optionObjectsToBuild:Map<String, Dynamic> = [];
+
+  public var cates:Array<String> = ['Gameplay', 'Visuals', 'Misc', 'Appearance'];
+
+  public var currentLoadedOptions:Map<String, Dynamic> = [];
+
+  public function new(?cates:Array<String> = null, ?options:Map<String, Array<String>> = null, ?buildOptionObjects:Map<String, BuildOption>,
+      ?optionObjects:Map<String, Dynamic> = null)
+  {
+    if (cates != null) this.cates = cates;
+    if (options != null) this.options = options;
+    if (buildOptionObjects != null) this.buildOptionObjects = buildOptionObjects;
+    if (optionObjects != null) this.optionObjectsToBuild = optionObjects;
     super();
-    add(window = new PsychUIWindow(0, 0));
-    window.add(box = new PsychUIBox(50, 40, 720, 640, ['Gameplay', 'Visuals', 'Graphics', 'Controls', 'Misc']));
-    box.canMove = false;
-    window.add(noteKeyBox = new PsychUIBox(650, 60, 330, 300, ['Key Binds', 'Note Options']));
-    noteKeyBox.minimizeOnFocusLost = true;
-    noteKeyBox.canMove = false;
-    noteKeyBox.isMinimized = true;
-    noteKeyBox.bg.visible = false;
-
-    ClientPrefs.saveSettings();
-
-    buildGameplaySettings();
-    buildNoteColorSettings();
+    camMain = new FlxCamera(0, 0, FlxG.width, FlxG.height);
+    optionsCam = new FlxCamera();
   }
 
   override public function create()
   {
-    super.create();
+    persistentDraw = persistentUpdate = true;
+
+    FlxG.cameras.add(camMain, false);
+    FlxG.cameras.setDefaultDrawTarget(camMain, true);
+    this.camera = camMain;
     FlxG.mouse.visible = true;
+
+    FlxG.camera.zoom = 1.0;
+
+    header = new OptionCategoryHeader(0, 0, cates);
+    header.camera = camMain;
+    add(header);
+
+    body = new OptionsBody(0, 0);
+    body.camera = camMain;
+    body.background.x = header.background.x;
+    add(body);
+
+    reloadOptions(header.currentCata.cata);
+
+    super.create();
   }
 
-  function updatenoteKeyBoxBg()
+  public function reloadOptions(curSelected:String)
   {
-    if (noteKeyBox.selectedTab != null)
+    currentLoadedOptions.clear();
+    final optionChoices:Array<String> = options.get(curSelected);
+    for (option in optionChoices)
     {
-      var menu = noteKeyBox.selectedTab.menu;
-      noteKeyBox.bg.x = noteKeyBox.x + noteKeyBox.selectedIndex * (noteKeyBox.width / noteKeyBox.tabs.length);
-      noteKeyBox.bg.setGraphicSize(menu.width, menu.height + 21);
-      noteKeyBox.bg.updateHitbox();
+      final buildOption:BuildOption = buildOptionObjects.get(option);
+      switch (buildOption)
+      {
+        case DROPDOWN:
+        case ARRAY:
+        case TOGGLE:
+        case SHIFT:
+        case NUMBER:
+        case SLIDER:
+        case KEYBIND:
+      }
     }
   }
-
-  public var lastFocus:PsychUIInputText;
 
   override public function update(elapsed:Float)
   {
-    if (!fileDialog.completed)
+    if (FlxG.mouse.overlaps(header.leftArrow, camMain))
     {
-      lastFocus = PsychUIInputText.focusOn;
-      return;
+      GeneralUtils.transformSpriteColor(header.leftArrow.arrow, [1, 1, 1, 1, 255, 255, 0]);
+      if (FlxG.mouse.justPressed)
+      {
+        header.onChangeCata(-1);
+        reloadOptions(header.currentCata.cata);
+      }
     }
-    if (!FlxG.mouse.visible) FlxG.mouse.visible = true;
+    else
+      header.callWhiteTimerL();
+
+    if (FlxG.mouse.overlaps(header.rightArrow, camMain))
+    {
+      GeneralUtils.transformSpriteColor(header.rightArrow.arrow, [1, 1, 1, 1, 255, 255, 0]);
+      if (FlxG.mouse.justPressed)
+      {
+        header.onChangeCata(1);
+        reloadOptions(header.currentCata.cata);
+      }
+    }
+    else
+      header.callWhiteTimerR();
+
     super.update(elapsed);
-
-    if (controls.BACK)
-    {
-      ClientPrefs.saveSettings();
-      MusicBeatState.switchState(new states.MainMenuState());
-    }
-  }
-
-  override function destroy()
-  {
-    ClientPrefs.loadPrefs();
-    ClientPrefs.keybindSaveLoad();
-    super.destroy();
-  }
-
-  var downScroll:PsychUICheckBox;
-  var middleScroll:PsychUICheckBox;
-  var ghostTapping:PsychUICheckBox;
-  var disableResetButton:PsychUICheckBox;
-
-  public function buildGameplaySettings()
-  {
-    final settings = box.getTab('Gameplay').menu;
-    var objX = 10;
-    var objY = 25;
-
-    downScroll = window.createCheckBox(objX, objY, "Down Scroll", 100, null, ClientPrefs.data.downScroll);
-    downScroll.onClick = function() {
-      ClientPrefs.data.downScroll = downScroll.checked;
-    };
-    settings.add(downScroll);
-    settings.add(window.createText(downScroll.x, downScroll.y + 20, 100, 'If checked, notes go Down instead of Up, simple enough.', 10, "left"));
-
-    middleScroll = window.createCheckBox(objX, objY + 100, "Middle Scroll", 100, null, ClientPrefs.data.middleScroll);
-    middleScroll.onClick = function() {
-      ClientPrefs.data.middleScroll = middleScroll.checked;
-    };
-    middleScroll.checked = ClientPrefs.data.middleScroll;
-    settings.add(middleScroll);
-    settings.add(window.createText(middleScroll.x, middleScroll.y + 20, 100, 'If checked, your notes get centered', 10, 'left'));
-
-    ghostTapping = window.createCheckBox(objX, middleScroll.y + 80, "Ghost Tapping", 100, null, ClientPrefs.data.downScroll);
-    ghostTapping.onClick = function() {
-      ClientPrefs.data.ghostTapping = ghostTapping.checked;
-    };
-    settings.add(ghostTapping);
-    settings.add(window.createText(ghostTapping.x, ghostTapping.y + 20, 100,
-      "If checked, you won't get misses from pressing keys\nwhile there are no notes able to be hit.", 10, "left"));
-
-    disableResetButton = window.createCheckBox(ghostTapping.x, ghostTapping.y + 120, 'Disable Reset Button', 100, null, ClientPrefs.data.noReset);
-    disableResetButton.onClick = function() {
-      ClientPrefs.data.noReset = disableResetButton.checked;
-    }
-    settings.add(disableResetButton);
-    settings.add(window.createText(disableResetButton.x, disableResetButton.y + 20, 100, "If checked, pressing Reset won't do anything.", 10, "left"));
-  }
-
-  var noteColors:PsychUINoteColors = null;
-
-  public function buildNoteColorSettings()
-  {
-    final tab = noteKeyBox.getTab('Note Options');
-    final tab_group = tab.menu;
-    var btnX = tab.x - box.x;
-    var btnY = 1;
-    var btnWid = Std.int(tab.width);
-
-    var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '   Note Colors...', function() {
-      openSubState(new options.NotesColorSubState());
-
-      noteKeyBox.isMinimized = true;
-      noteKeyBox.bg.visible = false;
-
-      // openSubState(new BasePrompt(500, 160, 'Note Color Option', function(state:BasePrompt) {
-      //   var btn:PsychUIButton = new PsychUIButton(state.bg.x + state.bg.width - 40, state.bg.y, 'X', state.close, 40);
-      //   btn.cameras = state.cameras;
-      //   btn.disabled = !noteColors.disabled;
-      //   state.add(btn);
-
-      //   var btnY = 390;
-      //   var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Note Colors', function() {
-      //     noteColors = new PsychUINoteColors(40, 50);
-      //     noteColors.cameras = state.cameras;
-      //     noteColors.screenCenter(XY);
-      //     state.add(noteColors);
-      //   });
-      //   btn.screenCenter(X);
-      //   btn.x -= 180;
-      //   btn.cameras = state.cameras;
-      //   state.add(btn);
-
-      //   // var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Note Colors', function() {
-      //   //   noteColors = new PsychUINoteColors(40, 50);
-      //   //   noteColors.cameras = states.cameras;
-      //   //   noteColors.screenCenter(XY);
-      //   //   state.add(noteColors);
-      //   // });
-      //   // btn.screenCenter(X);
-      //   // btn.x += 180;
-      //   // btn.cameras = state.cameras;
-      //   // state.add(btn);
-      // }));
-    }, btnWid);
-    btn.text.alignment = LEFT;
-    tab_group.add(btn);
-    // noteColors = new PsychUINoteColors(50, 40);
-    // noteColors.forEachAlive(function(sprite:FlxSprite) {
-    //   if (sprite != null && sprite.exists)
-    //   {
-    //     sprite.setGraphicSize(40, 40);
-    //   }
-    // });
-    // colorSettings.add(noteColors);
-  }
-
-  public function UIEvent(id:String, sender:Dynamic)
-  {
-    switch (id)
-    {
-      case PsychUIBox.CLICK_EVENT:
-        if (sender == noteKeyBox) updatenoteKeyBoxBg();
-
-      case PsychUIBox.MINIMIZE_EVENT:
-        if (sender == noteKeyBox)
-        {
-          noteKeyBox.bg.visible = !noteKeyBox.isMinimized;
-          updatenoteKeyBoxBg();
-        }
-    }
   }
 }

@@ -24,6 +24,7 @@ import backend.Debug;
 import backend.Language;
 import backend.StageData;
 import backend.WeekData;
+import backend.ComboStats;
 import backend.song.Song;
 import backend.song.SongData;
 import backend.stage.*;
@@ -36,6 +37,8 @@ import objects.FunkinSCSprite;
 import objects.note.*;
 import objects.note.constant.*;
 import objects.stage.*;
+import objects.Hud;
+import objects.ComboRatingGroup;
 // States
 import states.PlayState;
 import states.LoadingState;
@@ -44,9 +47,12 @@ import states.MusicBeatState;
 import substates.MusicBeatSubState;
 import substates.IndieDiamondTransSubState;
 // Flixel
-import flixel.FlxState;
 import flixel.FlxG;
+import flixel.FlxBasic;
+import flixel.FlxObject;
 import flixel.FlxSprite;
+import flixel.FlxState;
+import flixel.FlxSubState;
 import flixel.FlxCamera;
 import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
@@ -70,10 +76,6 @@ import flixel.addons.effects.FlxSkewedSprite as FlxSkewed;
 import flxanimate.*;
 import flxanimate.PsychFlxAnimate as FlxAnimate;
 #end
-// Modcharting Tools
-#if SCEModchartingTools
-import modcharting.*;
-#end
 // Gamejolt
 import gamejolt.GJKeys;
 import gamejolt.GameJoltAPI;
@@ -81,6 +83,15 @@ import gamejolt.GameJoltAPI;
 import input.Controls;
 // Utils
 import utils.Constants;
+// Modchart
+#if FunkinModchart
+import modchart.*;
+#end
+// Filters
+#if flixelsoundfilters
+import flixel.sound.filters.*;
+import flixel.sound.filters.effects.*;
+#end
 
 // Usings
 using Lambda;
@@ -94,4 +105,5 @@ using utils.tools.IntTools;
 using utils.tools.IteratorTools;
 using utils.tools.MapTools;
 using utils.tools.StringTools;
+using utils.tools.CameraTools;
 #end

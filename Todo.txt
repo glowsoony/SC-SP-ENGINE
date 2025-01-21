@@ -1,6 +1,0 @@
-* Change many states and organize the source folder in a different way.
-* Finish all stages from base game to be complete and functional.
-* Update functions.
-* Make an explains in a doc.
-* Fix Any bugs that may appear without me noticing!
-* Rwar

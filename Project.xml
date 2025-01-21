@@ -3,7 +3,7 @@
 xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/xsd/project-1.0.4.xsd">
 	<!-- _________________________ Application Settings _________________________ -->
 
-	<app title="Friday Night Funkin': Sick Coders Engine" file="SCE" packageName="com.SCTeam.SCEE" package="com.SCTeam.SCE" main="Main" version="1.5.2" company="SCTeam" />
+	<app title="Friday Night Funkin': Sick Coders Engine" file="SCE" packageName="com.SCTeam.SCEE" package="com.SCTeam.SCE" main="Main" version="1.5.3" company="SCTeam"  />
 
 	<!--Switch Export with Unique ApplicationID and Icon-->
 	<set name="APP_ID" value="0x0100f6c013bbc000" />
@@ -25,7 +25,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<!-- ____________________________ Window Settings ___________________________ -->
 
 	<!--These window settings apply to all targets-->
-	<window width="1280" height="720" fps="60" background="#000000" hardware="true" vsync="false" />
+	<window width="1280" height="720" fps="60" background="#000000" hardware="true" vsync="false" allow-high-dpi="true" />
 
 	<!--HTML5-specific-->
 	<window if="html5" resizable="true" />
@@ -246,12 +246,10 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<haxelib name="hxtelemetry" if="telemetry"/>
 	<haxedef name="HXCPP_TELEMETRY"  if="telemetry"/>
 
-	<haxelib name="fnf-modcharting-tools"/>
 	<haxelib name="hscript-improved" />
 	<haxelib name="markdown"/>
 
 	<!-- Defines the SCE's version of modcharting Tools. -->
-	<define name="SCEModchartingTools" if="TestingM"/>
 	<define name="HScriptImproved" if="hscript-improved"/>
 
 	<!-- Enables a terminal log prompt on debug builds -->
@@ -266,6 +264,13 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<haxelib name="FlxPartialSound"/>
 	<haxelib name="flxsoundfilters" />
 
+	<haxedef name="FM_ENGINE" value="SCE"/>
+	<haxedef name="FM_ENGINE_VERSION" value="1.5.3"/>
+
+	<haxelib name="funkin-modchart" />
+
+	<define name="FunkinModchart" if="funkin-modchart"/>
+
 	<!--Disable source traces for release builds-->
 	<haxeflag name="-D no-traces"/>
 
@@ -279,6 +284,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 		Ignore packages we can't include.
 	-->
 	<haxeflag name="--macro" value="include('flixel', true, [ 'flixel.addons.editors.spine.*', 'flixel.addons.nape.*', 'flixel.system.macros.*' ])" />
+	<haxeflag name="--macro" value="modchart.core.macros.Macro.includeFiles()" if="FunkinModchart"/>
 
 	<section if="COMPILE_ALL_CLASSES">
 		<haxeflag name="-dce" value="no" />

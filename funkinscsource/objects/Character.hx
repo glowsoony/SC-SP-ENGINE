@@ -58,11 +58,6 @@ class Character extends FunkinSCSprite
   public var animDanced:Map<String, Bool>;
 
   /**
-   * Any extra data you may want to include.
-   */
-  public var extraData:Map<String, Dynamic> = new Map<String, Dynamic>();
-
-  /**
    * If the character is a player character or not.
    */
   public var isPlayer:Bool = false;
@@ -393,6 +388,11 @@ class Character extends FunkinSCSprite
    */
   public var useIdleSequence:Bool = false;
 
+  /**
+   * We can change this for a single character.
+   */
+  public var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
+
   public function new(x:Float, y:Float, ?character:String = 'bf', ?isPlayer:Bool = false, ?characterType:CharacterType = OTHER)
   {
     super(x, y);
@@ -419,6 +419,79 @@ class Character extends FunkinSCSprite
     }
   }
 
+  public var ignoreNoteSing:Bool = false;
+
+  public dynamic function onNoteEffect(direction:Int = -1, note:Note = null, missed:Bool = false)
+  {
+    if (ignoreNoteSing) return;
+    final animSuffix:String = (note != null ? note.animSuffix : '');
+    final isSusNote:Bool = (note != null ? note.isSustainNote : false);
+    final replaceAnimation:String = (note != null ? note.replacentAnimation : '');
+    final type:String = (note != null ? note.noteType : '');
+
+    if (!missed)
+    {
+      var animToPlay:String = (replaceAnimation == '') ? singAnimations[direction % singAnimations.length] + animSuffix : replaceAnimation + animSuffix;
+
+      var canPlay:Bool = true;
+      if (isSusNote)
+      {
+        var holdAnim:String = animToPlay + '-hold';
+        if (hasOffsetAnimation(holdAnim)) animToPlay = holdAnim;
+        if (getLastAnimationPlayed() == holdAnim || getAnimationName() == holdAnim + '-loop') canPlay = false;
+      }
+
+      final hasAnimations:Bool = hasOffsetAnimation(animToPlay);
+      final playAnimation:Bool = (!specialAnim && !note.skipAnimation && !note.noAnimation && ClientPrefs.data.characters && hasAnimations
+        && allowedToPlayAnimations);
+
+      if (callOnScripts('playCharacterNote', note != null ? [note] : []) != LuaUtils.Function_Stop)
+      {
+        if (playAnimation)
+        {
+          if (canPlay) playAnim(animToPlay, true);
+          holdTimer = 0;
+          callOnScripts('playCharacterNoteAnim', note != null ? [animToPlay, note] : [animToPlay]);
+
+          if (type == 'Hey!')
+          {
+            if (hasOffsetAnimation('hey'))
+            {
+              playAnim('hey', true);
+              if (!skipHeyTimer)
+              {
+                specialAnim = true;
+                heyTimer = 0.6;
+              }
+            }
+          }
+          else if (type == 'Cheer!')
+          {
+            if (hasOffsetAnimation('cheer'))
+            {
+              playAnim('cheer', true);
+              if (!skipHeyTimer)
+              {
+                specialAnim = true;
+                heyTimer = 0.6;
+              }
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      final animToPlay:String = singAnimations[direction % singAnimations.length] + 'miss' + animSuffix;
+      final hasMissedAnimations:Bool = hasOffsetAnimation(animToPlay);
+
+      if (hasMissAnimations && allowedToPlayAnimations && hasMissedAnimations && ClientPrefs.data.characters || (note != null && !note.noMissAnimation))
+      {
+        playAnim(animToPlay, true);
+      }
+    }
+  }
+
   public dynamic function resetCharacterAttributes(?character:String = "bf", ?isPlayer:Bool = false, ?characterType:CharacterType = OTHER)
   {
     animPlayerOffsets = new Map<String, Array<Float>>();
@@ -437,6 +510,7 @@ class Character extends FunkinSCSprite
     iconColorFormatted = isPlayer ? '#66FF33' : '#FF0000';
 
     noteSkinStyleOfCharacter = 'noteSkins/NOTE_assets';
+    strumSkinStyleOfCharacter = 'noteSkins/NOTE_assets';
 
     curColor = 0xFFFFFFFF;
 
@@ -505,17 +579,12 @@ class Character extends FunkinSCSprite
     scale.set(1, 1);
     updateHitbox();
 
-    var spriteName:String = "characters/" + curCharacter;
-    if (json.image != null) spriteName = json.image;
-
+    final spriteName:String = json.image != null ? json.image : "characters/" + curCharacter;
     loadSprite(Paths.checkForImage(spriteName), json.image, spriteName);
 
     imageFile = json.image;
     jsonScale = json.scale;
     jsonGraphicScale = json.graphicScale;
-
-    scale.set(1, 1);
-    updateHitbox();
 
     final defaultIfNotFoundArrowSkin:String = PlayState.SONG != null ? PlayState.SONG.options.arrowSkin : noteSkinStyleOfCharacter;
     final defaultIfNotFoundStrumSkin:String = PlayState.SONG != null ? PlayState.SONG.options.strumSkin : strumSkinStyleOfCharacter;
@@ -647,7 +716,12 @@ class Character extends FunkinSCSprite
     #end
 
     json.startingAnim != null ? playAnim(json.startingAnim) : (hasOffsetAnimation('danceRight') ? playAnim('danceRight') : playAnim('idle'));
+    _baseFlipX = flipX;
+    _baseFlipY = flipY;
   }
+
+  var _baseFlipX:Bool = false;
+  var _baseFlipY:Bool = false;
 
   override function update(elapsed:Float)
   {
@@ -708,26 +782,7 @@ class Character extends FunkinSCSprite
         if (isAnimationFinished()) playAnim(getLastAnimationPlayed(), false, false, animation.curAnim.frames.length - 3);
     }
 
-    if ((flipMode && isPlayer) || (!flipMode && !isPlayer))
-    {
-      if (getLastAnimationPlayed().startsWith('sing')) holdTimer += elapsed;
-
-      if (!CoolUtil.opponentModeActive || CoolUtil.opponentModeActive && isCustomCharacter)
-      {
-        if (holdTimer >= Conductor.stepCrochet * singDuration * (0.001 #if FLX_PITCH / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1) #end))
-        {
-          dance();
-          holdTimer = 0;
-        }
-      }
-    }
-
-    if (isPlayer && !isCustomCharacter && !flipMode)
-    {
-      if (getLastAnimationPlayed().startsWith('sing')) holdTimer += elapsed;
-      else
-        holdTimer = 0;
-    }
+    if (updateHoldTimer != null) updateHoldTimer(elapsed);
 
     if (!debugMode)
     {
@@ -755,6 +810,27 @@ class Character extends FunkinSCSprite
     callOnScripts('updatePost', [elapsed]);
   }
 
+  public dynamic function updateHoldTimer(elapsed:Float)
+  {
+    if (((flipMode && isPlayer) || (!flipMode && !isPlayer)))
+    {
+      if (getLastAnimationPlayed().startsWith('sing')) holdTimer += elapsed;
+
+      if (holdTimer >= Conductor.stepCrochet * singDuration * (0.001 #if FLX_PITCH / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1) #end))
+      {
+        dance();
+        holdTimer = 0;
+      }
+    }
+
+    if (isPlayer && !isCustomCharacter && !flipMode)
+    {
+      if (getLastAnimationPlayed().startsWith('sing')) holdTimer += elapsed;
+      else
+        holdTimer = 0;
+    }
+  }
+
   public var danced:Bool = false;
   public var stoppedDancing:Bool = false;
   public var stoppedUpdatingCharacter:Bool = false;
@@ -774,11 +850,11 @@ class Character extends FunkinSCSprite
     {
       final canInterrupt:Bool = animInterrupt.get(animation.curAnim.name);
 
+      var animName:String = ''; // Flow the game!
       if (canInterrupt)
       {
         if (idleDances == null)
         {
-          var animName:String = ''; // Flow the game!
           if (isDancing)
           {
             danced = !danced;
@@ -790,8 +866,7 @@ class Character extends FunkinSCSprite
           }
           else
           {
-            if (altAnim
-              && (hasOffsetAnimation('idle-alt') || hasOffsetAnimation('idle-alt2'))) animName = hasOffsetAnimation('idle-alt2') ? 'idle-alt2' : 'idle-alt';
+            if (altAnim && hasOffsetAnimation('idle-alt')) animName = 'idle-alt';
             else
               animName = 'idle' + idleSuffix;
           }
@@ -799,7 +874,6 @@ class Character extends FunkinSCSprite
         }
         else
         {
-          var animName:String = ''; // Flow the game!
           if (idleDances.dances != null)
           {
             // Code borrowed from Troll-Engine
@@ -878,8 +952,6 @@ class Character extends FunkinSCSprite
     final result2:Dynamic = callOnScripts('playAnim', [AnimName, Force, Reversed, Frame]);
     if (result == LuaUtils.Function_Stop || result2 == LuaUtils.Function_Stop) return;
 
-    super.playAnim(AnimName, Force, Reversed, Frame);
-
     final resultPost:Dynamic = callOnScripts('onPlayAnimPost', [AnimName, Force, Reversed, Frame]);
     final resultPost2:Dynamic = callOnScripts('playAnimPost', [AnimName, Force, Reversed, Frame]);
 
@@ -945,9 +1017,12 @@ class Character extends FunkinSCSprite
   public dynamic function isDancingType():Bool
     return isDancing;
 
+  public var allowedToPlayAnimations:Bool = true;
+
   public dynamic function allowHoldTimer():Bool
   {
-    return !isAnimationNull()
+    return allowedToPlayAnimations
+      && !isAnimationNull()
       && holdTimer > Conductor.stepCrochet * singDuration * (0.001 #if FLX_PITCH / FlxG.sound.music.pitch #end)
       && getLastAnimationPlayed().startsWith('sing')
       && !getLastAnimationPlayed().endsWith('miss');
@@ -959,12 +1034,18 @@ class Character extends FunkinSCSprite
     if (conditionsMet) dance(forced);
   }
 
-  public dynamic function danceChar(char:String, ?altBool:Bool, ?forcedToIdle:Bool, ?singArg:Bool)
+  public var isAltSection:Bool = false;
+  public var forcedToIdle:Bool = false;
+
+  public dynamic function danceChar(char:String, ?altBool:Null<Bool> = null, ?forceToIdle:Null<Bool> = null, ?danceArg:Null<Bool> = null)
   {
+    final isAlt:Bool = (altBool != null ? (altBool && isAltSection) : isAltSection);
+    final isFTI:Bool = (forceToIdle != null ? (forceToIdle && forcedToIdle) : forcedToIdle);
+    final canDance:Bool = (danceArg != null ? (allowedToPlayAnimations && danceArg) : allowedToPlayAnimations);
     switch (char)
     {
       case 'player', 'opponent':
-        if (allowDance() && singArg) dance(forcedToIdle, altBool);
+        if (allowDance() && canDance) dance(altBool, forcedToIdle);
       default:
         if (allowDance()) dance();
     }
@@ -1024,7 +1105,7 @@ class Character extends FunkinSCSprite
 
   public dynamic function resetAnimationVars()
   {
-    for (i in [
+    for (variable in [
       'flipMode',
       'stopIdle',
       'skipDance',
@@ -1037,7 +1118,7 @@ class Character extends FunkinSCSprite
       'charNotPlaying'
     ])
     {
-      Reflect.setProperty(this, i, false);
+      Reflect.setProperty(this, variable, false);
     }
   }
 
@@ -1085,6 +1166,26 @@ class Character extends FunkinSCSprite
       visible = vis;
   }
 
+  override public function getScreenBounds(?newRect:FlxRect, ?camera:FlxCamera):FlxRect
+  {
+    if ((hasFlippedX() || hasFlippedY()) && !debugMode)
+    {
+      if (hasFlippedX()) scale.x *= -1;
+      if (hasFlippedY()) scale.y *= -1;
+      var bounds:FlxRect = super.getScreenBounds(newRect, camera);
+      if (hasFlippedX()) scale.x *= -1;
+      if (hasFlippedY()) scale.y *= -1;
+      return bounds;
+    }
+    return super.getScreenBounds(newRect, camera);
+  }
+
+  public function hasFlippedX()
+    return flipX != _baseFlipX;
+
+  public function hasFlippedY()
+    return flipY != _baseFlipY;
+
   public override function draw()
   {
     var lastAlpha:Float = alpha;
@@ -1110,11 +1211,49 @@ class Character extends FunkinSCSprite
       return;
     }
     #end
-    callOnScripts('onDraw');
-    callOnScripts('draw');
-    super.draw();
-    callOnScripts('onDrawPost');
-    callOnScripts('drawPost');
+
+    if ((hasFlippedX() || hasFlippedY()) && !debugMode)
+    {
+      if (hasFlippedX())
+      {
+        flipX = !flipX;
+        scale.x *= -1;
+      }
+
+      if (hasFlippedY())
+      {
+        flipY = !flipY;
+        scale.y *= -1;
+      }
+
+      callOnScripts('onDraw');
+      callOnScripts('draw');
+
+      super.draw();
+
+      if (hasFlippedX())
+      {
+        flipX = !flipX;
+        scale.x *= -1;
+      }
+
+      if (hasFlippedY())
+      {
+        flipY = !flipY;
+        scale.y *= -1;
+      }
+
+      callOnScripts('onDrawPost');
+      callOnScripts('drawPost');
+    }
+    else
+    {
+      callOnScripts('onDraw');
+      callOnScripts('draw');
+      super.draw();
+      callOnScripts('onDrawPost');
+      callOnScripts('drawPost');
+    }
     if (missingCharacter && visible)
     {
       alpha = lastAlpha;
@@ -1127,16 +1266,11 @@ class Character extends FunkinSCSprite
 
   override public function destroy()
   {
-    if (animOffsets != null) animOffsets.clear();
     if (animInterrupt != null) animInterrupt.clear();
     if (animNext != null) animNext.clear();
     if (animDanced != null) animDanced.clear();
 
     if (animationNotes != null && animationNotes.length > 0) animationNotes.resize(0);
-
-    #if flxanimate
-    if (atlas != null) atlas = flixel.util.FlxDestroyUtil.destroy(atlas);
-    #end
 
     #if LUA_ALLOWED
     for (lua in luaArray)
@@ -1151,7 +1285,8 @@ class Character extends FunkinSCSprite
     for (script in hscriptArray)
       if (script != null)
       {
-        script.executeFunction('onDestroy');
+        var ny:Dynamic = script.get('onDestroy');
+        if (ny != null && Reflect.isFunction(ny)) ny();
         script.destroy();
       }
     hscriptArray = null;
@@ -1250,7 +1385,7 @@ class Character extends FunkinSCSprite
   public function initHScript(file:String)
   {
     final times:Float = Date.now().getTime();
-    var newScript:HScript = new HScript(null, file);
+    var newScript:HScript = new HScript(null, file, null, false, this);
 
     try
     {
@@ -1953,7 +2088,16 @@ typedef AnimArray =
 {
   var anim:String;
   var name:String;
+
+  /**
+   * Regular character offsets for each animation
+   */
   var ?offsets:Array<Int>;
+
+  /**
+   * If player, these offsets are used
+   * Only if the playerOffsets has the animations for player though!
+   */
   var ?playerOffsets:Array<Int>;
 
   /**
@@ -1962,7 +2106,16 @@ typedef AnimArray =
    */
   var ?loop:Bool;
 
+  /**
+   * if flipped horizontally
+   * @default false
+   */
   var ?flipX:Bool;
+
+  /**
+   * If flipped vertically
+   * @default false
+   */
   var ?flipY:Bool;
 
   /**
@@ -1971,7 +2124,23 @@ typedef AnimArray =
    */
   var ?fps:Int;
 
+  /**
+   * The Indices (or frame the animation contains)
+   * @default []
+   */
   var ?indices:Array<Int>;
+
+  /**
+   * The indices that range from a starting point to an ending point.
+   * @default []
+   */
+  var ?indicesRange:Array<Int>;
+
+  /**
+   * The indices that are excluded when using linkIndices.
+   * @default []
+   */
+  var ?excludedIndices:Array<Int>;
 
   /**
    * Whether this animation can be interrupted by the dance function.

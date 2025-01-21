@@ -317,7 +317,7 @@ class PicoBlazinHandler
 
   function willMissBeLethal()
   {
-    return PlayState.instance.health <= 0.0 && !PlayState.instance.practiceMode;
+    return PlayState.instance.hud.health <= 0.0 && !PlayState.instance.practiceMode;
   }
 
   function isDarnellPreppingUppercut()
@@ -337,7 +337,7 @@ class PicoBlazinHandler
 
   function isPlayerLowHealth()
   {
-    return PlayState.instance.health <= 0.3 * 2;
+    return PlayState.instance.hud.health <= 0.3 * 2;
   }
 
   function moveToBack()

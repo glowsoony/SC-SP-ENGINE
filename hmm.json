@@ -59,7 +59,7 @@
       "name": "flixel",
       "type": "git",
       "dir": null,
-      "ref": "Main-SCE",
+      "ref": "main",
       "url": "https://github.com/glowsoony/flixel"
     },
     {

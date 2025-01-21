@@ -369,31 +369,6 @@ class Script extends FlxBasic implements IFlxDestroyable
     set('insert', FlxG.state.insert);
     set('remove', FlxG.state.remove);
 
-    #if SCEModchartingTools
-    set('ModchartEditorState', modcharting.ModchartEditorState);
-    set('ModchartEvent', modcharting.ModchartEvent);
-    set('ModchartEventManager', modcharting.ModchartEventManager);
-    set('ModchartFile', modcharting.ModchartFile);
-    set('ModchartFuncs', modcharting.ModchartFuncs);
-    set('ModchartMusicBeatState', modcharting.ModchartMusicBeatState);
-    set('ModchartUtil', modcharting.ModchartUtil);
-    for (i in ['mod', 'Modifier'])
-      set(i, modcharting.Modifier); // the game crashes without this???????? what??????????? -- fue glow
-    set('ModifierSubValue', modcharting.Modifier.ModifierSubValue);
-    set('ModTable', modcharting.ModTable);
-    set('NoteMovement', modcharting.NoteMovement);
-    set('NotePositionData', modcharting.NotePositionData);
-    set('Playfield', modcharting.Playfield);
-    set('PlayfieldRenderer', modcharting.PlayfieldRenderer);
-    set('SimpleQuaternion', modcharting.SimpleQuaternion);
-    set('SustainStrip', modcharting.SustainStrip);
-
-    // Why?
-    if (states.PlayState.instance != null
-      && states.PlayState.SONG.options != null
-      && states.PlayState.SONG.options.notITG
-      && ClientPrefs.getGameplaySetting('modchart')) modcharting.ModchartFuncs.loadHScriptFunctions(this);
-    #end
     set('setAxes', function(axes:String) return flixel.util.FlxAxes.fromString(axes));
 
     if (states.PlayState.instance == FlxG.state)
@@ -429,13 +404,6 @@ class Script extends FlxBasic implements IFlxDestroyable
       return parseJson;
     });
   }
-
-  #if SCEModchartingTools
-  public inline function initMod(mod:modcharting.Modifier)
-  {
-    call("initMod", [mod]);
-  }
-  #end
 
   /**
    * Loads the script

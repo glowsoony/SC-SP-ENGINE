@@ -28,13 +28,17 @@ class HScriptSC
   public var modFolder:String;
 
   public var logErrors:Bool = true;
+  public var self:Dynamic;
 
-  public function new(path:String)
+  public var parent:Any = null;
+
+  public function new(path:String, ?parent:Any = null)
   {
     this.extension = Path.extension(path);
     this.path = path;
     this.scriptStr = #if MODS_ALLOWED File.getContent(path) #else Assets.getText(path) #end;
     this.fileName = Path.withoutDirectory(fileName);
+    this.parent = parent;
 
     #if MODS_ALLOWED
     var myFolder:Array<String> = path.split('/');
@@ -57,6 +61,8 @@ class HScriptSC
       Debug.displayAlert(e.message, 'Error on loading script $fileName');
       return;
     }
+
+    set('this', parent);
   }
 
   public function call(func:String, ?args:Array<Dynamic> = null):SCCall
@@ -69,7 +75,7 @@ class HScriptSC
       var fnc:Dynamic = variables().get(func);
       if (fnc != null && Reflect.isFunction(func))
       {
-        final call = Reflect.callMethod(null, fnc, args);
+        final call = Reflect.callMethod(parent, fnc, args);
         return {funcName: func, funcValue: fnc, funcReturn: call};
       }
     }
