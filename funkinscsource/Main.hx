@@ -27,7 +27,7 @@ import gamejolt.GameJoltGroup.GJToastManager;
 import gamejolt.*;
 import states.TitleState;
 #if desktop // Just to make sure DCE doesn't remove this, since it's not directly referenced anywhere else.
-import backend.ALSoftConfig;
+import audio.ALSoftConfig;
 #end
 
 // NATIVE API STUFF, YOU CAN IGNORE THIS AND SCROLL //
