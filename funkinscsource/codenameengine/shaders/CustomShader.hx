@@ -40,8 +40,5 @@ class CustomShader extends FunkinShader
   }
 
   public function getCode(path:String):String
-  {
-    var code:String = #if MODS_ALLOWED FileSystem.exists(path) ? File.getContent(path) : null #else Assets.exists(path) ? Assets.getText(path) : null #end;
-    return code;
-  }
+    return #if MODS_ALLOWED FileSystem.exists(path) ? File.getContent(path) : null #else Assets.exists(path) ? Assets.getText(path) : null #end;
 }

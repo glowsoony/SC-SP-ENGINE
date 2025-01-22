@@ -20,6 +20,14 @@ import scripting.*;
 import crowplexus.iris.Iris;
 #end
 
+enum abstract HoldTimerType(String) from String to String
+{
+  var BOTH = "Both";
+  var PLAYER = "Player";
+  var OPPONENT = "Opponent";
+  var CUSTOM = "Custom";
+}
+
 class Character extends FunkinSCSprite
 {
   /**
@@ -393,6 +401,12 @@ class Character extends FunkinSCSprite
    */
   public var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 
+  /**
+   * Used when holdTimer function is default and not changed.
+   * Used to change between a custom usage of **updateHoldTimer(elapsed)**
+   */
+  public var holdTimerType:HoldTimerType = BOTH;
+
   public function new(x:Float, y:Float, ?character:String = 'bf', ?isPlayer:Bool = false, ?characterType:CharacterType = OTHER)
   {
     super(x, y);
@@ -404,6 +418,7 @@ class Character extends FunkinSCSprite
     switch (character)
     {
       // case 'your character name in case you want to hardcode them instead':
+      #if BASE_GAME_FILES
       case 'pico-speaker':
         changeCharacter(character, isPlayer);
         skipDance = true;
@@ -414,6 +429,7 @@ class Character extends FunkinSCSprite
         changeCharacter(character, isPlayer);
         stopIdle = false;
         skipDance = true;
+      #end
       default:
         changeCharacter(character, isPlayer);
     }
@@ -509,8 +525,7 @@ class Character extends FunkinSCSprite
     iconColor = isPlayer ? 'FF66FF33' : 'FFFF0000';
     iconColorFormatted = isPlayer ? '#66FF33' : '#FF0000';
 
-    noteSkinStyleOfCharacter = 'noteSkins/NOTE_assets';
-    strumSkinStyleOfCharacter = 'noteSkins/NOTE_assets';
+    noteSkinStyleOfCharacter = strumSkinStyleOfCharacter = 'noteSkins/NOTE_assets';
 
     curColor = 0xFFFFFFFF;
 
@@ -812,7 +827,7 @@ class Character extends FunkinSCSprite
 
   public dynamic function updateHoldTimer(elapsed:Float)
   {
-    if (((flipMode && isPlayer) || (!flipMode && !isPlayer)))
+    if ((((flipMode && isPlayer) || (!flipMode && !isPlayer)) && holdTimerType == BOTH) || holdTimerType == OPPONENT)
     {
       if (getLastAnimationPlayed().startsWith('sing')) holdTimer += elapsed;
 
@@ -823,7 +838,7 @@ class Character extends FunkinSCSprite
       }
     }
 
-    if (isPlayer && !isCustomCharacter && !flipMode)
+    if (((isPlayer && !isCustomCharacter && !flipMode) && holdTimerType == BOTH) || holdTimerType == PLAYER)
     {
       if (getLastAnimationPlayed().startsWith('sing')) holdTimer += elapsed;
       else

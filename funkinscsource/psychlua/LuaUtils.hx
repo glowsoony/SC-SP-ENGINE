@@ -1076,9 +1076,6 @@ class LuaUtils
       animationFrame = PlayState.instance.boyfriend.animation.curAnim.curFrame;
     }
 
-    var oldTimer:Float->Void = null;
-    oldTimer = PlayState.instance.boyfriend.updateHoldTimer;
-
     PlayState.instance.playerStrums.characters.remove(PlayState.instance.boyfriend);
     PlayState.instance.boyfriend.resetAnimationVars();
 
@@ -1136,7 +1133,7 @@ class LuaUtils
       if (PlayState.instance.boyfriend.hasOffsetAnimation(animationName)) PlayState.instance.boyfriend.playAnim(animationName, true, false, animationFrame);
     }
 
-    PlayState.instance.boyfriend.updateHoldTimer = oldTimer;
+    PlayState.instance.boyfriend.holdTimerType = PlayState.instance.opponentMode ? "Opponent" : "Player";
     PlayState.instance.playerStrums.characters.push(PlayState.instance.boyfriend);
     PlayState.instance.setOnScripts('boyfriendName', PlayState.instance.boyfriend.curCharacter);
     PlayState.instance.boyfriend.loadCharacterScript(PlayState.instance.boyfriend.curCharacter);
@@ -1153,9 +1150,6 @@ class LuaUtils
       animationName = PlayState.instance.dad.animation.curAnim.name;
       animationFrame = PlayState.instance.dad.animation.curAnim.curFrame;
     }
-
-    var oldTimer:Float->Void = null;
-    oldTimer = PlayState.instance.dad.updateHoldTimer;
 
     PlayState.instance.opponentStrums.characters.remove(PlayState.instance.dad);
     PlayState.instance.remove(PlayState.instance.dad);
@@ -1212,7 +1206,7 @@ class LuaUtils
       if (PlayState.instance.dad.hasOffsetAnimation(animationName)) PlayState.instance.dad.playAnim(animationName, true, false, animationFrame);
     }
 
-    PlayState.instance.dad.updateHoldTimer = oldTimer;
+    PlayState.instance.dad.holdTimerType = PlayState.instance.opponentMode ? "Player" : "Opponent";
     PlayState.instance.opponentStrums.characters.push(PlayState.instance.dad);
     PlayState.instance.setOnScripts('dadName', PlayState.instance.dad.curCharacter);
     PlayState.instance.dad.loadCharacterScript(PlayState.instance.dad.curCharacter);

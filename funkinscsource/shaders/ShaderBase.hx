@@ -9,19 +9,14 @@ class ShaderBase
   public var id:String = null;
   public var tweens:Array<FlxTween> = [];
 
-  public function new(file:String)
+  public function new(file:String, ?ignorePref:Bool = false)
   {
-    if (!ClientPrefs.data.shaders)
+    if (!ClientPrefs.data.shaders && !ignorePref)
     {
-      shader = null;
+      shader = new FlxRuntimeShader();
       return;
     }
-    final fragShaderPath:String = Paths.shaderFragment(file);
-    final vertShaderPath:String = Paths.shaderVertex(file);
-    final fragCode:String = getCode(fragShaderPath);
-    final vertCode:String = getCode(vertShaderPath);
-
-    shader = new FlxRuntimeShader(fragCode, vertCode);
+    shader = new FlxRuntimeShader(getCode(Paths.shaderFragment(file)), getCode(Paths.shaderVertex(file)));
   }
 
   public function canUpdate():Bool

@@ -1128,7 +1128,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
       }
       else if (FlxG.keys.justPressed.V)
       {
-        undoOffsets = [character.offset.x, character.editorOffset.y];
+        undoOffsets = [character.editorOffset.x, character.editorOffset.y];
         character.editorOffset.x = copiedOffset[0];
         character.editorOffset.y = copiedOffset[1];
         changedOffset = true;
@@ -1150,14 +1150,29 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
     var anim = anims[curAnim];
     if (changedOffset && anim != null)
     {
-      if (anim.offsets != null)
+      if (!character.isPlayer)
       {
-        anim.offsets[0] = Std.int(character.editorOffset.x);
-        anim.offsets[1] = Std.int(character.editorOffset.y);
+        if (anim.offsets != null)
+        {
+          anim.offsets[0] = Std.int(character.editorOffset.x);
+          anim.offsets[1] = Std.int(character.editorOffset.y);
 
-        character.addOffset(anim.anim, character.editorOffset.x, character.editorOffset.y);
-        character.playAnim(anim.anim, true);
-        updateText();
+          character.addOffset(anim.anim, character.editorOffset.x, character.editorOffset.y);
+          character.playAnim(anim.anim, true);
+          updateText();
+        }
+      }
+      else
+      {
+        if (anim.playerOffsets != null)
+        {
+          anim.playerOffsets[0] = Std.int(character.editorOffset.x);
+          anim.playerOffsets[1] = Std.int(character.editorOffset.y);
+
+          character.addPlayerOffset(anim.anim, character.editorOffset.x, character.editorOffset.y);
+          character.playAnim(anim.anim, true);
+          updateText();
+        }
       }
     }
 
@@ -1347,7 +1362,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
         animsTxt.addFormat(selectedFormat, n, intendText.length);
       }
       else
-        intendText += anim.anim + ": " + anim.offsets;
+        intendText += anim.anim + ": " + (anim.playerOffsets != null ? anim.playerOffsets : anim.offsets);
     }
     animsTxt.text = intendText;
   }
@@ -1403,7 +1418,6 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
     #end
 
     if (!character.hasOffsetAnimation(anim)) character.addOffset(anim, 0, 0);
-
     if (!character.animPlayerOffsets.exists(anim)) character.addPlayerOffset(anim, 0, 0);
   }
 
@@ -1443,7 +1457,10 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
   {
     var animList:Array<String> = [];
     for (anim in anims)
+    {
+      if (anim.playerOffsets == null && anim.offsets != null) anim.playerOffsets = anim.offsets;
       animList.push(anim.anim);
+    }
     if (animList.length < 1) animList.push('NO ANIMATIONS'); // Prevents crash
 
     animationDropDown.list = animList;

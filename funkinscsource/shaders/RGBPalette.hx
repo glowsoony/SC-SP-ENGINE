@@ -199,7 +199,7 @@ class RGBShaderReference
     return (stealthGlowBlue = parent.stealthGlowBlue = value);
   }
 
-  public var allowNew:Bool = true;
+  public var allowNew = true;
 
   private function cloneOriginal()
   {

@@ -153,52 +153,6 @@ class PlayState extends MusicBeatState
   public var practiceMode:Bool = false;
   public var opponentMode(default, set):Bool = false;
 
-  public function setTimer(char:Character, both:Bool = true, isPlayer:Bool = false)
-  {
-    if (char == null) return;
-    char.updateHoldTimer = function(elapsed) {
-      if (both)
-      {
-        if (((char.flipMode && char.isPlayer) || (!char.flipMode && !char.isPlayer)))
-        {
-          if (char.getLastAnimationPlayed().startsWith('sing')) char.holdTimer += elapsed;
-
-          if (char.holdTimer >= Conductor.stepCrochet * char.singDuration * (0.001 / playbackRate))
-          {
-            char.dance();
-            char.holdTimer = 0;
-          }
-        }
-
-        if (isPlayer && !char.isCustomCharacter && !char.flipMode)
-        {
-          if (char.getLastAnimationPlayed().startsWith('sing')) char.holdTimer += elapsed;
-          else
-            char.holdTimer = 0;
-        }
-      }
-      else
-      {
-        if (isPlayer)
-        {
-          if (char.getLastAnimationPlayed().startsWith('sing')) char.holdTimer += elapsed;
-          else
-            char.holdTimer = 0;
-        }
-        else
-        {
-          if (char.getLastAnimationPlayed().startsWith('sing')) char.holdTimer += elapsed;
-
-          if (char.holdTimer >= Conductor.stepCrochet * char.singDuration * (0.001 / playbackRate))
-          {
-            char.dance();
-            char.holdTimer = 0;
-          }
-        }
-      }
-    }
-  }
-
   var you:FlxText = new FlxText(0, 0, 200, "YOU", 60);
   var youDuration:Float = 7;
 
@@ -206,15 +160,15 @@ class PlayState extends MusicBeatState
   {
     FlxTween.cancelTweensOf(you);
     you.alpha = 1;
-    you.x = value ? 230 : 870;
+    you.x = value ? 250 : 890;
     you.y = 180;
     FlxTween.tween(you, {alpha: 0}, youDuration, {ease: FlxEase.quadOut});
   }
 
   function set_opponentMode(value:Bool):Bool
   {
-    if (dad != null) setTimer(dad, !value, value);
-    if (boyfriend != null) setTimer(boyfriend, !value, !value);
+    if (dad != null) dad.holdTimerType = value ? "Player" : "Opponent";
+    if (boyfriend != null) boyfriend.holdTimerType = value ? "Opponent" : "Player";
 
     playerStrums.characterStrumlineType = value ? 'DAD' : 'BF';
     opponentStrums.characterStrumlineType = value ? 'BF' : 'DAD';
@@ -753,24 +707,6 @@ class PlayState extends MusicBeatState
       gf.idleToBeat = gf.isDancing = false;
     }
 
-    if (opponentMode)
-    {
-      dad.updateHoldTimer = function(elapsed:Float) {
-        if (dad.getLastAnimationPlayed().startsWith('sing')) dad.holdTimer += elapsed;
-        else
-          dad.holdTimer = 0;
-      }
-      boyfriend.updateHoldTimer = function(elapsed:Float) {
-        if (boyfriend.getLastAnimationPlayed().startsWith('sing')) boyfriend.holdTimer += elapsed;
-
-        if (boyfriend.holdTimer >= Conductor.stepCrochet * boyfriend.singDuration * (0.001 / playbackRate))
-        {
-          boyfriend.dance();
-          boyfriend.holdTimer = 0;
-        }
-      }
-    }
-
     #if (LUA_ALLOWED || HSCRIPT_ALLOWED)
     // "GLOBAL" SCRIPTS
     for (folder in Mods.directoriesWithFile(Paths.getSharedPath(), 'scripts/global/'))
@@ -800,11 +736,12 @@ class PlayState extends MusicBeatState
           if (file.toLowerCase().endsWith('.$extn')) addScript(folder + file, CODENAME);
     #end
 
-    gf.loadCharacterScript(gf.curCharacter);
-    dad.loadCharacterScript(dad.curCharacter);
-    mom.loadCharacterScript(mom.curCharacter);
-    boyfriend.loadCharacterScript(boyfriend.curCharacter);
+    for (character in [gf, mom, dad, boyfriend])
+      if (character != null) character.loadCharacterScript(character.curCharacter);
     #end
+
+    dad.holdTimerType = opponentMode ? "Player" : "Opponent";
+    boyfriend.holdTimerType = opponentMode ? "Opponent" : "Player";
 
     if (ClientPrefs.data.characters)
     {
@@ -1012,86 +949,53 @@ class PlayState extends MusicBeatState
     you.cameras = [camHUD];
     add(you);
 
-    opponentStrums.cameras = playerStrums.cameras = [usesHUD ? camHUD : camNoteStuff];
+    for (strumLine in strumLines)
+    {
+      strumLine.cameras = [usesHUD ? camHUD : camNoteStuff];
+      strumLine.calls.onSpawnNoteLua = function(notes:FlxTypedGroup<Note>, dunceNote:Note) {
+        callOnLuas('onSpawnNote', [
+          notes.members.indexOf(dunceNote),
+          dunceNote.noteData,
+          dunceNote.noteType,
+          dunceNote.isSustainNote,
+          dunceNote.strumTime
+        ]);
+        strumLine.calls.spawnNoteLua.dispatch(notes, dunceNote);
+      }
 
-    playerStrums.calls.onSpawnNoteLua = function(notes:FlxTypedGroup<Note>, dunceNote:Note) {
-      callOnLuas('onSpawnNote', [
-        notes.members.indexOf(dunceNote),
-        dunceNote.noteData,
-        dunceNote.noteType,
-        dunceNote.isSustainNote,
-        dunceNote.strumTime
-      ]);
-      playerStrums.calls.spawnNoteLua.dispatch(notes, dunceNote);
-    }
+      strumLine.calls.onSpawnNoteHx = function(dunceNote:Note) {
+        callOnAllHS('onSpawnNote', [dunceNote]);
+        strumLine.calls.spawnNoteHx.dispatch(dunceNote);
+      }
 
-    playerStrums.calls.onSpawnNoteHx = function(dunceNote:Note) {
-      callOnAllHS('onSpawnNote', [dunceNote]);
-      playerStrums.calls.spawnNoteHx.dispatch(dunceNote);
-    }
+      strumLine.calls.onSpawnNoteLuaPost = function(notes:FlxTypedGroup<Note>, dunceNote:Note) {
+        callOnLuas('onSpawnNotePost', [
+          notes.members.indexOf(dunceNote),
+          dunceNote.noteData,
+          dunceNote.noteType,
+          dunceNote.isSustainNote,
+          dunceNote.strumTime
+        ]);
+        strumLine.calls.spawnNoteLuaPost.dispatch(notes, dunceNote);
+      }
 
-    playerStrums.calls.onSpawnNoteLuaPost = function(notes:FlxTypedGroup<Note>, dunceNote:Note) {
-      callOnLuas('onSpawnNotePost', [
-        notes.members.indexOf(dunceNote),
-        dunceNote.noteData,
-        dunceNote.noteType,
-        dunceNote.isSustainNote,
-        dunceNote.strumTime
-      ]);
-      playerStrums.calls.spawnNoteLuaPost.dispatch(notes, dunceNote);
-    }
-
-    playerStrums.calls.onSpawnNoteHxPost = function(dunceNote:Note) {
-      callOnAllHS('onSpawnNote', [dunceNote]);
-      playerStrums.calls.spawnNoteHx.dispatch(dunceNote);
-    }
-
-    opponentStrums.calls.onSpawnNoteLua = function(notes:FlxTypedGroup<Note>, dunceNote:Note) {
-      callOnLuas('onSpawnNote', [
-        notes.members.indexOf(dunceNote),
-        dunceNote.noteData,
-        dunceNote.noteType,
-        dunceNote.isSustainNote,
-        dunceNote.strumTime
-      ]);
-      opponentStrums.calls.spawnNoteLua.dispatch(notes, dunceNote);
-    }
-
-    opponentStrums.calls.onSpawnNoteHx = function(dunceNote:Note) {
-      callOnAllHS('onSpawnNote', [dunceNote]);
-      opponentStrums.calls.spawnNoteHx.dispatch(dunceNote);
-    }
-
-    opponentStrums.calls.onSpawnNoteLuaPost = function(notes:FlxTypedGroup<Note>, dunceNote:Note) {
-      callOnLuas('onSpawnNotePost', [
-        notes.members.indexOf(dunceNote),
-        dunceNote.noteData,
-        dunceNote.noteType,
-        dunceNote.isSustainNote,
-        dunceNote.strumTime
-      ]);
-      opponentStrums.calls.spawnNoteLuaPost.dispatch(notes, dunceNote);
-    }
-
-    opponentStrums.calls.onSpawnNoteHxPost = function(dunceNote:Note) {
-      callOnAllHS('onSpawnNote', [dunceNote]);
-      opponentStrums.calls.spawnNoteHx.dispatch(dunceNote);
-    }
-
-    playerStrums.calls.onKeyPressedPre = function(key):Dynamic {
-      // had to name it like this else it'd break older scripts lol
-      var ret:Dynamic = callOnScripts('onKeyPressPre', [key]);
-      return ret;
-    }
-    playerStrums.calls.onKeyPressed = function(key) {
-      callOnScripts('onKeyPress', [key]);
-    }
-    playerStrums.calls.onKeyReleasedPre = function(key):Dynamic {
-      var ret:Dynamic = callOnScripts('onKeyReleasePre', [key]);
-      return ret;
-    }
-    playerStrums.calls.onKeyReleased = function(key) {
-      callOnScripts('onKeyRelease', [key]);
+      strumLine.calls.onSpawnNoteHxPost = function(dunceNote:Note) {
+        callOnAllHS('onSpawnNote', [dunceNote]);
+        strumLine.calls.spawnNoteHx.dispatch(dunceNote);
+      }
+      strumLine.calls.onKeyPressedPre = function(key):Dynamic {
+        // had to name it like this else it'd break older scripts lol
+        return callOnScripts('onKeyPressPre', [key]);
+      }
+      strumLine.calls.onKeyPressed = function(key) {
+        callOnScripts('onKeyPress', [key]);
+      }
+      strumLine.calls.onKeyReleasedPre = function(key):Dynamic {
+        return callOnScripts('onKeyReleasedPre', [key]);
+      }
+      strumLine.calls.onKeyReleased = function(key) {
+        callOnScripts('onKeyRelease', [key]);
+      }
     }
     playerStrums.calls.onNoteKeyHit = function(note) {
       goodNoteHit(note);
@@ -4235,15 +4139,6 @@ class PlayState extends MusicBeatState
       else if (targetDad) dad.playAnim('cheer');
       else
         gf.playAnim('cheer');
-
-      // Zoom over to the Results screen.
-      // TODO: Re-enable this.
-      /*
-        FlxTween.tween(FlxG.camera, {zoom: 1200}, 1.1,
-          {
-            ease: FlxEase.expoIn,
-          });
-       */
     });
   }
 
@@ -4394,44 +4289,46 @@ class PlayState extends MusicBeatState
     // GUITAR HERO SUSTAIN CHECK LOL!!!!
     if (note != null && guitarHeroSustains && note.parent == null)
     {
-      if (note.tail.length != 0)
+      if (note.parent == null)
       {
-        note.alpha = 0.3;
-        for (childNote in note.tail)
+        if (note.tail.length != 0)
         {
-          childNote.alpha = 0.3;
-          childNote.missed = true;
-          childNote.canBeHit = false;
-          childNote.ignoreNote = true;
-          childNote.tooLate = true;
-        }
-        note.missed = true;
-        note.canBeHit = false;
-
-        // subtract += 0.385; // you take more damage if playing with this gameplay changer enabled.
-        // i mean its fair :p -crow
-        subtract *= note.tail.length + 1;
-        // i think it would be fair if damage multiplied based on how long the sustain is -Tahir
-      }
-
-      if (note.missed) return;
-    }
-
-    if (note != null && guitarHeroSustains && note.parent != null && note.isSustainNote)
-    {
-      if (note.missed) return;
-
-      var parentNote:Note = note.parent;
-      if (parentNote.wasGoodHit && parentNote.tail.length != 0)
-      {
-        for (child in parentNote.tail)
-          if (child != note)
+          note.alpha = 0.3;
+          for (childNote in note.tail)
           {
-            child.missed = true;
-            child.canBeHit = false;
-            child.ignoreNote = true;
-            child.tooLate = true;
+            childNote.alpha = 0.3;
+            childNote.missed = true;
+            childNote.canBeHit = false;
+            childNote.ignoreNote = true;
+            childNote.tooLate = true;
           }
+          note.missed = true;
+          note.canBeHit = false;
+
+          // subtract += 0.385; // you take more damage if playing with this gameplay changer enabled.
+          // i mean its fair :p -crow
+          subtract *= note.tail.length + 1;
+          // i think it would be fair if damage multiplied based on how long the sustain is -Tahir
+        }
+
+        if (note.missed) return;
+      }
+      else if (note.parent != null && note.isSustainNote)
+      {
+        if (note.missed) return;
+
+        var parentNote:Note = note.parent;
+        if (parentNote.wasGoodHit && parentNote.tail.length != 0)
+        {
+          for (child in parentNote.tail)
+            if (child != note)
+            {
+              child.missed = true;
+              child.canBeHit = false;
+              child.ignoreNote = true;
+              child.tooLate = true;
+            }
+        }
       }
     }
 
@@ -4728,10 +4625,7 @@ class PlayState extends MusicBeatState
 
     super.stepHit();
 
-    if (curStep == lastStepHit)
-    {
-      return;
-    }
+    if (curStep == lastStepHit) return;
 
     lastStepHit = curStep;
 
@@ -5122,21 +5016,10 @@ class PlayState extends MusicBeatState
       var frag:String = folder + name + '.frag';
       var vert:String = folder + name + '.vert';
       var found:Bool = false;
-      if (FileSystem.exists(frag))
-      {
-        frag = File.getContent(frag);
-        found = true;
-      }
-      else
-        frag = null;
 
-      if (FileSystem.exists(vert))
-      {
-        vert = File.getContent(vert);
-        found = true;
-      }
-      else
-        vert = null;
+      frag = FileSystem.exists(frag) ? File.getContent(frag) : null;
+      vert = FileSystem.exists(vert) ? File.getContent(vert) : null;
+      found = (FileSystem.exists(frag) || FileSystem.exists(vert));
 
       if (found)
       {
@@ -5160,20 +5043,13 @@ class PlayState extends MusicBeatState
   public function changeStage(id:String)
   {
     if (!ClientPrefs.data.background) return;
-    if (ClientPrefs.data.characters)
-    {
-      for (i in [gf, dad, mom, boyfriend])
-      {
-        remove(i);
-      }
-    }
-
+    if (ClientPrefs.data.characters) for (character in [gf, dad, mom, boyfriend])
+      if (character != null) remove(character);
     if (stage != null) stage.onDestroy();
 
     stage = new Stage(id);
     stage.setupStageProperties(SONG.songId, true);
-    stage.curStage = id;
-    curStage = id;
+    stage.curStage = curStage = id;
     defaultCamZoom = stage.camZoom;
     cameraSpeed = stage.stageCameraSpeed;
 
