@@ -5,6 +5,7 @@
 # https://haxe.org/download/version/4.3.6/
 haxelib install lime
 haxelib install openfl
+haxelib install funkin-modchart
 haxelib git flixel https://github.com/glowsoony/flixel/tree/main
 haxelib git flixel-addons https://github.com/glowsoony/flixel-addons/tree/dev
 haxelib install tjson
