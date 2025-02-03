@@ -1,4 +1,4 @@
-package docs;
+package docs.files;
 
 // HScript stuff
 

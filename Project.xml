@@ -49,7 +49,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<set name="BUILD_DIR" value="export/debug-telemetry" if="debug telemetry" />
 	<set name="NO_PRECOMPILED_HEADERS" value="1"/>
 
-	<source path="funkinscsource" />
+	<source path="scsource" />
 
 	<!-- PSYCH && SCE CUSTOMIZATION -->
 
@@ -270,6 +270,8 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<haxelib name="FlxPartialSound"/>
 	<haxelib name="flxsoundfilters" />
 
+	<define name="FunkinModcharting" />
+
 	<!--<define name="FunkinModcharting" /> --> <!--Not used because SCE adapter is not public-->
 	<section if="FunkinModcharting">
 		<haxedef name="FM_ENGINE" value="SCE"/>
@@ -292,17 +294,11 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 		Ensure additional class packages are available at runtime (some only really used by scripts).
 		Ignore packages we can't include.
 	-->
-	<haxeflag name="--macro" value="include('flixel', true, [ 'flixel.addons.editors.spine.*', 'flixel.addons.nape.*', 'flixel.system.macros.*' ])" />
-	<haxeflag name="--macro" value="modchart.core.macros.Macro.includeFiles()" if="FunkinModchart"/>
 
 	<section if="COMPILE_ALL_CLASSES">
 		<haxeflag name="-dce" value="no" />
-		<haxeflag name="--macro" value="codenameengine.macros.Macros.addAdditionalClasses()" />
+		<haxeflag name="--macro" value="scfunkin.backend.macros.Macros.inclusiveMacro()" />
 	</section>
-
-	<!--Macro fixes-->
-	<haxeflag name="--macro" value="allowPackage('flash')" />
-	<haxeflag name="--macro" value="include('my.pack')" />
 
 	<!-- Haxe 4.3.0+: Enable pretty syntax errors and stuff. -->
 	<!-- pretty (haxeflixel default), indent, classic (haxe compiler default) -->

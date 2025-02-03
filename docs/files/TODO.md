@@ -1,5 +1,5 @@
 # TODO:
-- [ ] Reorganize source code.
+- [x] Reorganize source code.
 - - [ ] Remove unnecessary lines to each file.
 
 - [ ] Update all documentation. (New file changes for everything).

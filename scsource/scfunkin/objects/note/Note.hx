@@ -1,0 +1,914 @@
+package scfunkin.objects.note;
+
+// If you want to make a custom note type, you should search for:
+// "function set_noteType"
+import flixel.graphics.FlxGraphic;
+import flixel.math.FlxAngle;
+import flixel.math.FlxMath;
+import flixel.math.FlxRect;
+import flixel.system.FlxAssets.FlxGraphicAsset;
+import flixel.system.FlxAssets.FlxShader;
+import flixel.graphics.tile.FlxDrawTrianglesItem;
+import scfunkin.backend.data.note.NoteTypesConfig;
+import scfunkin.backend.data.note.NoteTypeConfigJson;
+import scfunkin.backend.data.judgement.Rating;
+import scfunkin.shaders.RGBPalette;
+import scfunkin.shaders.RGBPalette.RGBShaderReference;
+import scfunkin.utils.tools.ICloneable;
+import openfl.Assets;
+import openfl.display.TriangleCulling;
+import openfl.geom.Vector3D;
+import openfl.geom.ColorTransform;
+import lime.math.Vector2;
+import scfunkin.objects.note.NoteSplash.NoteSplashData;
+
+using StringTools;
+
+// Starting data when first created! / Can be ediuted too
+typedef NoteSpriteStartData =
+{
+  strumTime:Float,
+  noteData:Int,
+  isSustainNote:Bool,
+  noteSkin:String,
+  ?prevNote:Note,
+  ?createdFrom:Dynamic,
+  ?scrollSpeed:Float,
+  ?parentStrumline:StrumLine,
+  ?inEditor:Bool
+}
+
+typedef EventNote =
+{
+  var time:Float;
+  var name:String;
+  var params:Array<String>;
+}
+
+/**
+ * The note object used as a data structure to spawn and manage notes during gameplay.
+ *
+ * If you want to make a custom note type, you should search for: "function set_noteType"
+**/
+class Note extends FunkinSCSprite implements ICloneable<Note>
+{
+  // <----
+  public static var globalRgbShaders:Array<RGBPalette> = [];
+  public static var globalQuantRgbShaders:Array<RGBPalette> = [];
+  public static var instance:Note = null;
+
+  // This is needed for the hardcoded note types to appear on the Chart Editor,
+  // It's also used for backwards compatibility with 0.1 - 0.3.2 charts.
+  public static final defaultNoteTypes:Array<String> = [
+    '', // Always leave this one empty pls
+    'Alt Animation',
+    'Hey!',
+    'Cheer!',
+    'Hurt Note',
+    'GF Sing',
+    'Mom Sing',
+    'No Animation'
+  ];
+
+  // We can now edit the time they spawn, useful for Modifiers (MT and non-MT)
+  public var spawnTime:Float = 2000;
+
+  //  public var holdNote:SustainTrail;
+  public var eventNote:EventNote;
+
+  public var eventLength:Int = 0;
+  public var eventName:String = null;
+  public var eventTime:Float = 0.0;
+  public var params:Array<String> = [];
+
+  public var strumTime:Float = 0;
+  public var noteData:Int = 0;
+  public var strumLineID:Int = 0;
+  public var actualStrumLineID:Int = 0;
+
+  public var canBeHit:Bool = false;
+  public var tooLate:Bool = false;
+
+  public var wasGoodHit:Bool = false;
+  public var missed:Bool = false;
+
+  public var ignoreNote:Bool = false;
+  public var hitByOpponent:Bool = false;
+  public var noteWasHit:Bool = false;
+  public var prevNote:Note;
+  public var nextNote:Note;
+
+  public var noteSection:Int = 0;
+
+  public var spawned:Bool = false;
+
+  public var noteSkin:String = null;
+  public var dType:Int = 0;
+
+  public var tail:Array<Note> = []; // for sustains
+  public var parent:Note;
+  public var blockHit:Bool = false; // only works for player
+
+  public var sustainLength:Float = 0;
+  public var isSustainNote:Bool = false;
+  public var noteType(default, set):String = null;
+
+  public var rgbShader:RGBShaderReference;
+
+  public var animSuffix:String = '';
+  public var gfNote:Bool = false;
+  public var momNote:Bool = false;
+  public var earlyHitMult:Float = 1;
+  public var lateHitMult:Float = 1;
+  public var lowPriority:Bool = false;
+
+  public static var SUSTAIN_SIZE:Int = 44;
+  public static var swagWidth:Float = 160 * 0.7;
+  public static var colArray:Array<String> = ['purple', 'blue', 'green', 'red'];
+  public static var defaultNoteSkin(default, never):String = 'noteSkins/NOTE_assets';
+
+  public var bpm:Float = Conductor.bpm;
+
+  public var noteSplashData:NoteSplashData =
+    {
+      disabled: false,
+      texture: null,
+      antialiasing: !PlayState.isPixelStage,
+      useGlobalShader: false,
+      useRGBShader: (PlayState.SONG != null) ? !(PlayState.SONG.options.disableSplashRGB == true) : true,
+      useNoteRGB: true,
+      a: ClientPrefs.data.splashAlpha,
+      r: -1,
+      g: -1,
+      b: -1
+    };
+  public var offsetX:Float = 0;
+  public var offsetY:Float = 0;
+  public var offsetAngle:Float = 0;
+  public var multAlpha:Float = 1;
+  public var multSpeed(default, set):Float = 1;
+
+  public var copyX:Bool = true;
+  public var copyY:Bool = true;
+  public var copyAngle:Bool = true;
+  public var copyAlpha:Bool = true;
+  public var copyVisible:Bool = false;
+
+  public var hitHealth:Float = 0.02;
+  public var missHealth:Float = 0.01;
+  public var rating:RatingWindow;
+  public var ratingToString:String = '';
+
+  public var texture(default, set):String = null;
+
+  public var noAnimation:Bool = false;
+  public var noMissAnimation:Bool = false;
+  public var hitCausesMiss:Bool = false;
+  public var distance:Float = 2000; // plan on doing scroll directions soon -bb
+
+  public var hitsoundDisabled:Bool = false;
+  public var hitsoundChartEditor:Bool = true;
+
+  public var canBeMissed:Bool = false;
+
+  /**
+   * Forces the hitsound to be played even if the user's hitsound volume is set to 0
+  **/
+  public var hitsoundForce:Bool = false;
+
+  public var hitsoundVolume(get, default):Float = 1.0;
+
+  function get_hitsoundVolume():Float
+  {
+    if (ClientPrefs.data.hitsoundVolume > 0) return ClientPrefs.data.hitsoundVolume;
+    return hitsoundForce ? hitsoundVolume : 0.0;
+  }
+
+  public var hitsound(default, set):String = 'hitsound';
+
+  public var noteStrumID(get, never):Int;
+
+  function get_noteStrumID():Int
+  {
+    if (parentStrumline == null) return noteData;
+    var id = noteData % parentStrumline.members.length;
+    if (id < 0) id = 0;
+    return id;
+  }
+
+  function set_hitsound(value:String):String
+  {
+    if (ClientPrefs.data.hitsoundType == 'Notes')
+    {
+      if (value == null || value == '')
+      {
+        if (ClientPrefs.data.hitsoundType == 'Notes' && ClientPrefs.data.hitSounds != "None") value = ClientPrefs.data.hitSounds;
+      }
+
+      if (value == null || value == '') value = 'hitsound';
+
+      hitsound = value;
+    }
+    else
+      hitsound = null;
+    return value;
+  }
+
+  public var isHoldEnd(get, never):Bool;
+
+  function get_isHoldEnd():Bool
+  {
+    return (!isAnimationNull() && getAnimationName().endsWith('end'));
+  }
+
+  public var customColorsOnNotes:Bool = true;
+  public var customColoredNotes:Bool = false;
+
+  // Extra support for textures
+  public var containsPixelTexture:Bool = false;
+  public var pathNotFound:Bool = false;
+  public var isPixel:Bool = false;
+  public var changedSkin:Bool = false;
+
+  // For comfert.
+  public var notePathLib:String = null;
+
+  public static var notITGNotes:Bool = false;
+
+  public var canSplash:Bool = true;
+
+  public var replacentAnimation:String = '';
+  public var skipAnimation:Bool = false;
+
+  private function set_multSpeed(value:Float):Float
+  {
+    resizeByRatio(value / multSpeed);
+    multSpeed = value;
+    return value;
+  }
+
+  public dynamic function resizeByRatio(ratio:Float) // haha funny twitter shit
+  {
+    if (isSustainNote && animation.curAnim != null && !isHoldEnd)
+    {
+      scale.y *= ratio;
+      updateHitbox();
+    }
+  }
+
+  private function set_texture(value:String):String
+  {
+    changedSkin = true;
+    reloadNote(value);
+    return value;
+  }
+
+  public dynamic function defaultRGB()
+  {
+    var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[noteData];
+    if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture) arr = ClientPrefs.data.arrowRGBPixel[noteData];
+
+    if (arr != null && noteData > -1 && noteData <= arr.length)
+    {
+      rgbShader.r = arr[0];
+      rgbShader.g = arr[1];
+      rgbShader.b = arr[2];
+    }
+    else
+    {
+      rgbShader.r = 0xFFFF0000;
+      rgbShader.g = 0xFF00FF00;
+      rgbShader.b = 0xFF0000FF;
+    }
+  }
+
+  public dynamic function defaultRGBQuant(limit:Bool = true)
+  {
+    var arrQuantRGB:Array<FlxColor> = ClientPrefs.data.arrowRGBQuantize[noteData];
+
+    if (arrQuantRGB != null && noteData > -1 && noteData <= arrQuantRGB.length)
+    {
+      rgbShader.r = arrQuantRGB[0];
+      rgbShader.g = arrQuantRGB[1];
+      rgbShader.b = arrQuantRGB[2];
+    }
+    else
+    {
+      rgbShader.r = 0xFFFF0000;
+      rgbShader.g = 0xFF00FF00;
+      rgbShader.b = 0xFF0000FF;
+    }
+  }
+
+  private function set_noteType(value:String):String
+  {
+    customColoredNotes ? defaultRGBQuant() : defaultRGB();
+
+    if (noteData > -1 && noteType != value)
+    {
+      switch (value)
+      {
+        case 'Hurt Note':
+          ignoreNote = true; // NO ONE WANTS TO GET HURT NOT EVEN THE OPPONENT :sob:
+          // reloadNote('HURTNOTE_assets');
+          // this used to change the note texture to HURTNOTE_assets.png,
+          // but i've changed it to something more optimized with the implementation of RGBPalette:
+
+          // custom shit
+          customColorsOnNotes = false;
+
+          // note colors
+          rgbShader.r = 0xFF101010;
+          rgbShader.g = 0xFFFF0000;
+          rgbShader.b = 0xFF990022;
+
+          // splash data and colors
+          // noteSplashData.r = 0xFFFF0000;
+          // noteSplashData.g = 0xFF101010;
+          noteSplashData.texture = 'noteSplashes-electric';
+
+          // gameplay data
+          lowPriority = true;
+          missHealth = isSustainNote ? 0.25 : 0.1;
+          hitCausesMiss = true;
+          hitsound = 'cancelMenu';
+          hitsoundChartEditor = false;
+        case 'Alt Animation':
+          animSuffix = '-alt';
+        case 'No Animation':
+          noAnimation = true;
+          noMissAnimation = true;
+        case 'GF Sing':
+          gfNote = true;
+        case 'Mom Sing':
+          momNote = true;
+      }
+      if (value != null && value.length > 1)
+      {
+        NoteTypesConfig.applyNoteTypeData(this, value);
+        NoteTypeConfigJson.applyNoteTypeJson(this, value);
+      }
+      if (hitsound != 'hitsound' && ClientPrefs.data.hitsoundVolume > 0) Paths.sound(hitsound); // precache new sound for being idiot-proof
+      noteType = value;
+    }
+    return value;
+  }
+
+  public var realNoteData:Int = 0;
+  public var parentStrumline:StrumLine;
+
+  // Used in-game to control the scroll speed within a song
+  public var noteScrollSpeed:Float = 1.0;
+
+  public var inEditor:Bool = false;
+
+  public var allowDeleteAndMiss:Bool = true;
+  public var allowStrumFollow:Bool = true;
+  public var allowNoteToHit:Bool = true;
+
+  public var noteSpriteData:NoteSpriteStartData;
+
+  public function new(data:NoteSpriteStartData)
+  {
+    super();
+
+    this.noteSpriteData = data;
+    antialiasing = ClientPrefs.data.antialiasing;
+    this.moves = false;
+
+    x += (ClientPrefs.data.middleScroll ? StrumLine.STRUM_X_MIDDLESCROLL : StrumLine.STRUM_X) + 50;
+    // MAKE SURE ITS DEFINITELY OFF SCREEN?
+    y -= 2000;
+
+    startNoteData(data);
+  }
+
+  public dynamic function startNoteData(data:NoteSpriteStartData)
+  {
+    this.noteSpriteData = data;
+    if (data.createdFrom == null) data.createdFrom = PlayState.instance;
+    if (data.prevNote == null) data.prevNote = this;
+
+    this.prevNote = data.prevNote;
+    this.isSustainNote = data.isSustainNote;
+    this.noteSkin = data.noteSkin;
+    this.inEditor = data.inEditor;
+
+    this.strumTime = data.strumTime;
+    if (!inEditor) this.strumTime += ClientPrefs.data.noteOffset;
+
+    this.noteData = data.noteData;
+    this.parentStrumline = data.parentStrumline;
+    this.noteScrollSpeed = data.scrollSpeed;
+
+    if (data.noteData > -1)
+    {
+      rgbShader = new RGBShaderReference(this, customColoredNotes ? initializeGlobalQuantRGBShader(data.noteData) : initializeGlobalRGBShader(data.noteData));
+      texture = data.noteSkin;
+      if (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB) rgbShader.enabled = false;
+
+      x += swagWidth * data.noteData;
+      if (!isSustainNote && noteData < colArray.length)
+      { // Doing this 'if' check to fix the warnings on Senpai songs
+        var animToPlay:String = '';
+        animToPlay = colArray[data.noteData % colArray.length];
+        animation.play(animToPlay + 'Scroll');
+      }
+    }
+
+    if (texture.contains('pixel') || noteSkin.contains('pixel')) containsPixelTexture = true;
+
+    if (prevNote != null) prevNote.nextNote = this;
+
+    if (isSustainNote && prevNote != null)
+    {
+      alpha = 0.6;
+      multAlpha = 0.6;
+      hitsoundDisabled = true;
+      if (ClientPrefs.data.downScroll && !inEditor) flipY = true;
+
+      offsetX += width / 2;
+      copyAngle = false;
+
+      animation.play(colArray[noteData % colArray.length] + 'holdend');
+
+      updateHitbox();
+
+      offsetX -= width / 2;
+
+      if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture) offsetX += 30;
+
+      if (prevNote.isSustainNote)
+      {
+        prevNote.animation.play(colArray[prevNote.noteData % colArray.length] + 'hold');
+
+        prevNote.scale.y *= Conductor.stepCrochet / 100 * 1.05; // Because of how SCE works with sustains the value is static to 1.05 unless they break.
+        prevNote.scale.y *= noteScrollSpeed;
+
+        // Let's see if I might un-null it!
+        if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture || isPixel)
+        {
+          prevNote.scale.y *= 1.19;
+          prevNote.scale.y *= (6 / height); // Auto adjust note size
+        }
+        prevNote.updateHitbox();
+      }
+
+      if (PlayState.isPixelStage)
+      {
+        scale.y *= PlayState.daPixelZoom;
+        updateHitbox();
+      }
+      earlyHitMult = 0;
+    }
+    else if (!isSustainNote)
+    {
+      centerOffsets();
+      centerOrigin();
+    }
+    x += offsetX;
+  }
+
+  public dynamic function setupNote(strumLineID:Int, actualID:Int, daSection:Int, noteType:String)
+  {
+    this.strumLineID = strumLineID;
+    this.actualStrumLineID = actualID;
+    this.noteSection = daSection;
+    this.noteType = noteType;
+  }
+
+  public static function initializeGlobalRGBShader(noteData:Int)
+  {
+    if (globalRgbShaders[noteData] == null)
+    {
+      var newRGB:RGBPalette = new RGBPalette();
+      var arr:Array<FlxColor> = !PlayState.isPixelStage ? ClientPrefs.data.arrowRGB[noteData] : ClientPrefs.data.arrowRGBPixel[noteData];
+
+      if (arr != null && noteData > -1 && noteData <= arr.length)
+      {
+        newRGB.r = arr[0];
+        newRGB.g = arr[1];
+        newRGB.b = arr[2];
+      }
+      else
+      {
+        newRGB.r = 0xFFFF0000;
+        newRGB.g = 0xFF00FF00;
+        newRGB.b = 0xFF0000FF;
+      }
+      globalRgbShaders[noteData] = newRGB;
+    }
+    return globalRgbShaders[noteData];
+  }
+
+  public static function initializeGlobalQuantRGBShader(noteData:Int)
+  {
+    if (globalQuantRgbShaders[noteData] == null)
+    {
+      var newRGB:RGBPalette = new RGBPalette();
+      var arr:Array<FlxColor> = ClientPrefs.data.arrowRGBQuantize[noteData];
+
+      if (arr != null && noteData > -1 && noteData <= arr.length)
+      {
+        newRGB.r = arr[0];
+        newRGB.g = arr[1];
+        newRGB.b = arr[2];
+      }
+      else
+      {
+        newRGB.r = 0xFFFF0000;
+        newRGB.g = 0xFF00FF00;
+        newRGB.b = 0xFF0000FF;
+      }
+      globalQuantRgbShaders[noteData] = newRGB;
+    }
+    return globalQuantRgbShaders[noteData];
+  }
+
+  var _lastNoteOffX:Float = 0;
+
+  static var _lastValidChecked:String; // optimization
+
+  public var originalHeight:Float = 6;
+  public var correctionOffset:Float = 0; // dont mess with this
+
+  public function reloadNote(noteStyle:String = '', postfix:String = '')
+  {
+    if (noteStyle == null) noteStyle = '';
+    if (postfix == null) postfix = '';
+
+    var skin:String = noteStyle + postfix;
+    var animName:String = null;
+    if (animation.curAnim != null) animName = animation.curAnim.name;
+
+    var skinPixel:String = skin;
+    var lastScaleY:Float = scale.y;
+    var wasPixelNote:Bool = isPixel;
+    var skinPostfix:String = getNoteSkinPostfix();
+    var customSkin:String = skin + skinPostfix;
+    var path:String = noteStyle.contains('pixel') ? 'pixelUI/' : '';
+
+    var noteStylePaths:Bool = (Paths.fileExists('images/' + path + noteStyle + '.png', IMAGE)
+      || Paths.fileExists('images/notes/' + path + noteStyle + '.png', IMAGE));
+    var noteSkinPaths:Bool = (Paths.fileExists('images/' + path + noteSkin + '.png', IMAGE)
+      || Paths.fileExists('images/notes/' + path + noteSkin + '.png', IMAGE));
+    if (customSkin == _lastValidChecked || Paths.fileExists('images/' + path + customSkin + '.png', IMAGE))
+    {
+      skin = customSkin;
+      _lastValidChecked = customSkin;
+    }
+    else
+      skinPostfix = '';
+
+    if (noteStylePaths && noteSkinPaths)
+    {
+      if (noteSkin != noteStyle) noteSkin = noteStyle;
+      if (skin != noteSkin) skin = noteSkin;
+    }
+    else
+      skin = customSkin;
+
+    loadNoteTexture(skin, skinPostfix, skinPixel);
+
+    if (!inEditor && isSustainNote) scale.y = lastScaleY;
+    updateHitbox();
+
+    if (animName != null) animation.play(animName, true);
+    if (noteSkin != skin && noteSkin != noteStyle) noteSkin = skin;
+  }
+
+  public dynamic function loadNoteTexture(noteStyleType:String, skinPostfix:String, skinPixel:String)
+  {
+    var firstPathFound:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/notes/$noteStyleType.png')) || #end Assets.exists(Paths.getPath('images/notes/$noteStyleType.png'));
+    var secondPathFound:Bool = #if MODS_ALLOWED FileSystem.exists(Paths.getPath('images/$noteStyleType.png')) || #end Assets.exists(Paths.getPath('images/$noteStyleType.png'));
+    var pixelSusPath:String = "";
+    var pixelPath:String = "";
+    var notePath:String = "";
+    switch (noteType)
+    {
+      default:
+        switch (noteStyleType)
+        {
+          default:
+            if ((texture.contains('pixel') || noteStyleType.contains('pixel') || containsPixelTexture)
+              && !FileSystem.exists('$noteStyleType.xml'))
+            {
+              if (firstPathFound)
+              {
+                pixelSusPath = noteStyleType != "" ? 'notes/' + noteStyleType + 'ENDS' : ('pixelUI/' + skinPixel + 'ENDS' + skinPostfix);
+                pixelPath = noteStyleType != "" ? 'notes/' + noteStyleType : ('pixelUI/' + skinPixel + skinPostfix);
+              }
+              else if (secondPathFound)
+              {
+                pixelSusPath = noteStyleType != "" ? noteStyleType + 'ENDS' : ('pixelUI/' + skinPixel + 'ENDS' + skinPostfix);
+                pixelPath = noteStyleType != "" ? noteStyleType : ('pixelUI/' + skinPixel + skinPostfix);
+              }
+              else
+              {
+                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB);
+                pixelSusPath = noteSkinNonRGB ? 'pixelUI/NOTE_assetsENDS' : 'pixelUI/noteSkins/NOTE_assetsENDS' + getNoteSkinPostfix();
+                pixelPath = noteSkinNonRGB ? 'pixelUI/NOTE_assets' : 'pixelUI/noteSkins/NOTE_assets' + getNoteSkinPostfix();
+              }
+
+              if (pixelSusPath.length > 0 && pixelPath.length > 0)
+              {
+                if (isSustainNote)
+                {
+                  var graphic = Paths.image(pixelSusPath, notePathLib, !notITGNotes);
+                  loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
+                  originalHeight = graphic.height / 2;
+                }
+                else
+                {
+                  var graphic = Paths.image(pixelPath, notePathLib, !notITGNotes);
+                  loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 5));
+                }
+
+                loadNoteAnims(true);
+              }
+            }
+            else
+            {
+              if (firstPathFound) notePath = 'notes/' + noteStyleType;
+              else if (secondPathFound) notePath = noteStyleType;
+              else
+              {
+                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB);
+                notePath = noteSkinNonRGB ? "NOTE_assets" : "noteSkins/NOTE_assets" + getNoteSkinPostfix();
+              }
+
+              if (notePath.length > 0)
+              {
+                frames = Paths.getSparrowAtlas(notePath, notePathLib, !notITGNotes);
+                loadNoteAnims();
+              }
+            }
+        }
+    }
+  }
+
+  public static function getNoteSkinPostfix()
+  {
+    var skin:String = '';
+    if (ClientPrefs.data.noteSkin != ClientPrefs.defaultData.noteSkin) skin = '-' + ClientPrefs.data.noteSkin.trim().toLowerCase().replace(' ', '_');
+    return skin;
+  }
+
+  public dynamic function loadNoteAnims(?pixel:Bool = false)
+  {
+    if (colArray[noteData] == null) return;
+    if (pixel)
+    {
+      isPixel = true;
+      if (!inEditor) setGraphicSize(Std.int(width * PlayState.daPixelZoom));
+      if (isSustainNote)
+      {
+        animation.add(colArray[noteData] + 'holdend', [noteData + 4], 12, true);
+        animation.add(colArray[noteData] + 'hold', [noteData], 12, true);
+      }
+      else
+        animation.add(colArray[noteData] + 'Scroll', [noteData + 4], 12, true);
+      antialiasing = false;
+
+      if (!inEditor && isSustainNote)
+      {
+        offsetX += _lastNoteOffX;
+        _lastNoteOffX = (width - 7) * (PlayState.daPixelZoom / 2);
+        offsetX -= _lastNoteOffX;
+      }
+    }
+    else
+    {
+      isPixel = false;
+      if (isSustainNote)
+      {
+        attemptToAddAnimationByPrefix('purpleholdend', 'pruple end hold', 24, true); // this fixes some retarded typo from the original note .FLA
+        animation.addByPrefix(colArray[noteData] + 'holdend', colArray[noteData] + ' hold end', 24, true);
+        animation.addByPrefix(colArray[noteData] + 'hold', colArray[noteData] + ' hold piece', 24, true);
+      }
+      else
+        animation.addByPrefix(colArray[noteData] + 'Scroll', colArray[noteData] + '0');
+
+      if (!inEditor)
+      {
+        setGraphicSize(Std.int(width * 0.7));
+        updateHitbox();
+
+        if (!isSustainNote)
+        {
+          centerOffsets();
+          centerOrigin();
+        }
+      }
+    }
+  }
+
+  function attemptToAddAnimationByPrefix(name:String, prefix:String, framerate:Int = 24, doLoop:Bool = true)
+  {
+    var animFrames = [];
+    @:privateAccess
+    animation.findByPrefix(animFrames, prefix); // adds valid frames to animFrames
+    if (animFrames.length < 1) return;
+
+    animation.addByPrefix(name, prefix, framerate, doLoop);
+  }
+
+  override function update(elapsed:Float)
+  {
+    super.update(elapsed);
+    containsPixelTexture = ((texture.contains('pixel') || noteSkin.contains('pixel')) && !containsPixelTexture);
+  }
+
+  public dynamic function followStrumArrow(myStrum:StrumArrow, pitch:Float = 1)
+  {
+    var strumX:Float = myStrum.x;
+    var strumY:Float = myStrum.y;
+    var strumAngle:Float = myStrum.angle;
+    var strumAlpha:Float = myStrum.alpha;
+    var strumDirection:Float = myStrum.direction;
+    var strumVisible:Bool = myStrum.visible;
+
+    distance = (0.45 * (Conductor.songPosition - strumTime) * (noteScrollSpeed / (parentStrumline != null ? parentStrumline.playbackSpeed : pitch)) * multSpeed);
+    if (!myStrum.downScroll) distance *= -1;
+
+    if (copyAngle) angle = strumDirection - 90 + strumAngle + offsetAngle;
+
+    if (copyAlpha) alpha = strumAlpha * multAlpha;
+
+    if (copyX)
+    {
+      @:privateAccess
+      x = strumX + offsetX + myStrum._dirCos * distance;
+    }
+
+    if (copyY)
+    {
+      @:privateAccess
+      y = strumY + offsetY + correctionOffset + myStrum._dirSin * distance;
+      if (myStrum.downScroll && isSustainNote)
+      {
+        if (texture.contains('pixel') || noteSkin.contains('pixel') || containsPixelTexture)
+        {
+          y -= PlayState.daPixelZoom * 9.5;
+        }
+        y -= (frameHeight * scale.y) - (swagWidth / 2);
+      }
+    }
+
+    if (copyVisible) visible = strumVisible;
+  }
+
+  public var clipToStrum:Bool = false;
+
+  public dynamic function clipToStrumArrow(myStrum:StrumArrow)
+  {
+    var center:Float = myStrum.y + offsetY + swagWidth / 2;
+    if ((clipToStrum || !ignoreNote) && (wasGoodHit || (prevNote.wasGoodHit && !canBeHit)))
+    {
+      var swagRect:FlxRect = clipRect;
+      if (swagRect == null) swagRect = new FlxRect(0, 0, frameWidth, frameHeight);
+
+      if (myStrum.downScroll)
+      {
+        if (y - offset.y * scale.y + height >= center)
+        {
+          swagRect.width = frameWidth;
+          swagRect.height = (center - y) / scale.y;
+          swagRect.y = frameHeight - swagRect.height;
+        }
+      }
+      else if (y + offset.y * scale.y <= center)
+      {
+        swagRect.y = (center - y) / scale.y;
+        swagRect.width = width / scale.x;
+        swagRect.height = (height / scale.y) - swagRect.y;
+      }
+      clipRect = swagRect;
+    }
+  }
+
+  public function validTime(rate:Float = 1, ?ignoreMultSpeed:Bool = false):Bool
+  {
+    final time:Float = (spawnTime * rate) / (noteScrollSpeed < 1 ? noteScrollSpeed : 1) / (!ignoreMultSpeed && multSpeed < 1 ? multSpeed : 1);
+    return (strumTime - Conductor.songPosition < time);
+  }
+
+  @:access(flixel.FlxCamera)
+  override public function draw():Void
+  {
+    if (tooLate && !inEditor)
+    {
+      if (alpha > 0.3) alpha = 0.3;
+    }
+
+    super.draw();
+  }
+
+  @:noCompletion
+  override function set_clipRect(rect:FlxRect):FlxRect
+  {
+    clipRect = rect;
+
+    if (frames != null) frame = frames.frames[animation.frameIndex];
+
+    return rect;
+  }
+
+  override public function clone():Note
+  {
+    return new Note(
+      {
+        strumTime: this.strumTime,
+        noteData: this.noteData,
+        isSustainNote: this.isSustainNote,
+        noteSkin: this.noteSkin,
+        prevNote: this.prevNote,
+        createdFrom: null,
+        scrollSpeed: this.noteScrollSpeed,
+        parentStrumline: this.parentStrumline,
+        inEditor: this.inEditor
+      });
+  }
+
+  override public function destroy()
+  {
+    clipRect = flixel.util.FlxDestroyUtil.put(clipRect);
+    _lastValidChecked = '';
+    super.destroy();
+  }
+
+  public var quants:Array<Int> = [4, 8, 12, 16, 20, 24, 28, 32];
+
+  public dynamic function setCustomColors(type:String)
+  {
+    final doesNotReturn:Bool = customColorsOnNotes && rgbShader.enabled;
+    if (!doesNotReturn) return;
+
+    final bpmChanges = Conductor.bpmChangeMap;
+    var time:Float = 0;
+    var currentBPM:Float = PlayState.SONG.bpm;
+    var newTime:Float = 0;
+    var beat:Float = 0;
+    var colR:FlxColor = 0x000000;
+    var colG:FlxColor = 0x000000;
+    var colB:FlxColor = 0x000000;
+
+    time = this.strumTime;
+    newTime = time;
+    for (i in 0...bpmChanges.length)
+      if (strumTime > bpmChanges[i].songTime)
+      {
+        currentBPM = bpmChanges[i].bpm;
+        newTime = time - bpmChanges[i].songTime;
+      }
+
+    beat = scfunkin.utils.MathUtil.round(((currentBPM * (newTime - scfunkin.backend.data.save.ClientPrefs.data.noteOffset)) / 1000 / 60) * 48, 0);
+
+    switch (type)
+    {
+      case 'Quant':
+        if (!isSustainNote)
+        {
+          for (colorIndex => quant in quants)
+          {
+            var colored = false;
+            if (beat % (192 / quant) == 0)
+            {
+              rgbShader.r = ClientPrefs.data.arrowRGBQuantize[colorIndex][0];
+              rgbShader.g = ClientPrefs.data.arrowRGBQuantize[colorIndex][1];
+              rgbShader.b = ClientPrefs.data.arrowRGBQuantize[colorIndex][2];
+              colored = true;
+            }
+
+            if (colorIndex == quants.length && colored == false)
+            {
+              rgbShader.r = 0xFF7C7C7C;
+              rgbShader.g = 0xFFFFFFFF;
+              rgbShader.b = 0xFF3A3A3A;
+              break;
+            }
+          }
+        }
+        else
+        {
+          rgbShader.r = prevNote.rgbShader.r;
+          rgbShader.g = prevNote.rgbShader.g;
+          rgbShader.b = prevNote.rgbShader.b;
+        }
+      case 'Rainbow': // Code borrowed from JS Engine
+        var superCoolColor:FlxColor = 0xFFFF0000;
+        superCoolColor.hue = (strumTime / 5000 * 360) % 360;
+        rgbShader.r = superCoolColor;
+        rgbShader.g = FlxColor.WHITE;
+        rgbShader.b = superCoolColor.getDarkened(0.7);
+    }
+  }
+
+  public function invalidate()
+  {
+    ignoreNote = true;
+    active = false;
+    visible = false;
+    kill();
+  }
+}
