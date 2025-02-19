@@ -66,7 +66,8 @@ class ResultsScreenKadeSubstate extends scfunkin.states.substates.MusicBeatSubSt
 
     comboText = new FlxText(20, -75, 0, '');
 
-    songText = new FlxText(20, -65, FlxG.width, PlayState.isStoryMode ? '' : 'Played on ${PlayState.SONG.songId} - [${Difficulty.getString().toLowerCase()}]');
+    songText = new FlxText(20, -65, FlxG.width,
+      PlayState.isStoryMode ? '' : 'Played on ${PlayState.SONG.getSongData('songId')} - [${Difficulty.getString().toLowerCase()}]');
     songText.size = 34;
     songText.setBorderStyle(FlxTextBorderStyle.OUTLINE, FlxColor.BLACK, 4, 1);
     songText.color = FlxColor.WHITE;
@@ -105,8 +106,11 @@ class ResultsScreenKadeSubstate extends scfunkin.states.substates.MusicBeatSubSt
     camResults.follow(camFollow, LOCKON, 0);
     camResults.snapToTarget();
 
-    music = new FlxSound().loadEmbedded(Paths.inst((PlayState.SONG.options.instrumentalPrefix != null ? PlayState.SONG.options.instrumentalPrefix : ''),
-      PlayState.SONG.songId, (PlayState.SONG.options.instrumentalSuffix != null ? PlayState.SONG.options.instrumentalSuffix : '')),
+    music = new FlxSound().loadEmbedded(Paths.inst((PlayState.SONG.getSongData('options')
+      .instrumentalPrefix != null ? PlayState.SONG.getSongData('options')
+      .instrumentalPrefix : ''),
+      PlayState.SONG.getSongData('songId'),
+      (PlayState.SONG.getSongData('options').instrumentalSuffix != null ? PlayState.SONG.getSongData('options').instrumentalSuffix : '')),
       true, true);
     music.volume = 0;
 

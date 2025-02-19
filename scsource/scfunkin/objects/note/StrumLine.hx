@@ -170,6 +170,7 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
   public var playNotes:Bool = false;
   public var isPlayer:Bool = false;
   public var staticColorStrums:Bool = false;
+  public var strumStyle:String = "";
 
   public function new(?strumLineId:Int = -1, ?characterStrumLineType:CharacterStrumLine = DAD)
   {
@@ -177,8 +178,8 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
     this.strumLineID = strumLineId;
     this.characterStrumlineType = characterStrumLineType;
     holdCovers.enabled = !(PlayState.SONG == null
-      || PlayState.SONG.options.disableHoldCovers
-      || PlayState.SONG.options.notITG
+      || PlayState.SONG.getSongData('options').disableHoldCovers
+      || PlayState.SONG.getSongData('options').notITG
       || ClientPrefs.data.holdCoverPlay);
     holdCovers.canSplash = characterStrumLineType == BF;
     notes = new FlxTypedGroup<Note>();
@@ -316,7 +317,7 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
           {
             final songNotes:Array<Dynamic> = section.sectionNotes[i];
             final spawnTime:Float = songNotes[0];
-            final noteColumn:Int = Std.int(songNotes[1] % PlayState.SONG.totalColumns);
+            final noteColumn:Int = Std.int(songNotes[1] % PlayState.SONG.getSongData('totalColumns'));
             final holdLength:Float = ClientPrefs.getGameplaySetting('sustainnotesactive')
               && !Math.isNaN(songNotes[2]) ? songNotes[2] : 0.0;
             final noteType:String = !Std.isOfType(songNotes[3], String) ? Note.defaultNoteTypes[songNotes[3]] : songNotes[3];
@@ -352,7 +353,7 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
                 strumTime: spawnTime,
                 noteData: noteColumn,
                 isSustainNote: false,
-                noteSkin: PlayState.SONG.options.arrowSkin,
+                noteSkin: PlayState.SONG.getSongData('options').arrowSkin,
                 prevNote: oldNote,
                 createdFrom: this,
                 scrollSpeed: scrollSpeed,
@@ -391,7 +392,7 @@ class StrumLine extends FlxTypedGroup<StrumArrow>
                     strumTime: spawnTime + (curStepCrochet * susNote),
                     noteData: noteColumn,
                     isSustainNote: true,
-                    noteSkin: PlayState.SONG.options.arrowSkin,
+                    noteSkin: PlayState.SONG.getSongData('options').arrowSkin,
                     prevNote: oldNote,
                     createdFrom: this,
                     scrollSpeed: scrollSpeed,

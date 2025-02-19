@@ -270,9 +270,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<haxelib name="FlxPartialSound"/>
 	<haxelib name="flxsoundfilters" />
 
-	<define name="FunkinModcharting" />
-
-	<!--<define name="FunkinModcharting" /> --> <!--Not used because SCE adapter is not public-->
+	<define name="FunkinModcharting" /> <!--Not used because SCE adapter is not public-->
 	<section if="FunkinModcharting">
 		<haxedef name="FM_ENGINE" value="SCE"/>
 		<haxedef name="FM_ENGINE_VERSION" value="1.5.3"/>
@@ -281,6 +279,8 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 
 		<define name="FunkinModchart" if="funkin-modchart"/>
 	</section>
+
+	<define name="MULTITHREADED_LOADING"/> <!-- UNCOMMENTING THIS LINE WILL ENABLE MULTITHREADED LOADING, WHICH IMPROVES LOADING TIMES, BUT WITH A LOW CHANCE FOR THE GAME FREEZE ON SONG LOAD -->
 
 	<!--Disable source traces for release builds-->
 	<haxeflag name="-D no-traces"/>

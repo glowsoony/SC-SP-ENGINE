@@ -471,60 +471,106 @@ class SongCharacterData
 
 typedef SwagSection =
 {
+  @:default([])
   var sectionNotes:Array<Dynamic>;
+  @:default(4.0)
   var sectionBeats:Float;
+  @:default(false)
   var mustHitSection:Bool;
+  @:default(false)
   @:optional var playerAltAnim:Bool;
+  @:default(false)
   @:optional var CPUAltAnim:Bool;
+  @:default(false)
   @:optional var player4Section:Bool;
+  @:default(false)
   @:optional var gfSection:Bool;
+  @:default(false)
   @:optional var altAnim:Bool;
+  @:default(false)
   @:optional var changeBPM:Bool;
+  @:default(0.0)
   @:optional var bpm:Float;
+  @:default(0)
   @:optional var dType:Int;
+  @:default(0)
   @:optional var index:Int;
 }
 
-typedef SwagSong =
+typedef SwagDifficulties =
+{
+  @:default([])
+  var difficulties:Map<String, SwagDifficulty>;
+}
+
+typedef SwagCharts =
+{
+  @:default([])
+  var charts:Map<String, SwagChart>;
+}
+
+typedef SwagChart =
+{
+  @:default([])
+  var notes:Array<SwagSection>;
+  @:default([])
+  var events:Array<Dynamic>;
+}
+
+typedef SwagDifficulty =
 {
   /**
    * Use to be the internal name of the song.
    */
-  var song:String;
+  @:default("")
+  @:optional var song:String;
 
   /**
    * The internal name of the song, as used in the file system.
    */
-  var songId:String;
+  @:default("")
+  @:optional var songId:String;
 
   /**
    * Variable used to display a name.
    */
-  var ?displayName:String;
+  @:default("")
+  @:optional var displayName:String;
 
-  var notes:Array<SwagSection>;
-  var events:Array<Dynamic>;
+  @:default(100.0)
   var bpm:Float;
+  @:default(false)
   var needsVoices:Bool;
+  @:default(1.0)
   var speed:Float;
+  @:default(0.0)
   var offset:Float;
 
+  @:default("")
   var stage:String;
+  @:default("")
   var format:String;
 
-  var ?options:OptionsData;
-  var ?gameOverData:GameOverData;
-  var ?characters:CharacterData;
+  @:default({})
+  @:optional var options:OptionsData;
+
+  @:default({})
+  @:optional var gameOverData:GameOverData;
+
+  @:default({})
+  @:optional var characters:CharacterData;
 
   /**
    * Using this, you can create custom data inside the song Json. But data only you can use for whatever else.
    */
-  var ?_extraData:Dynamic;
+  @:default(null)
+  @:optional var _extraData:Dynamic;
 
   /**
    * Identifier for strumLins and their ids.
    */
-  var ?strumLineIds:Array<Int>;
+  @:default([0, 1])
+  @:optional var strumLineIds:Array<Int>;
 
   /**
    * Can be used for multi-keys but personally for space bar mechanic
@@ -532,4 +578,37 @@ typedef SwagSong =
   @:optional
   @:default(4)
   var totalColumns:Int;
+}
+
+typedef SwagJsonInput =
+{
+  var jsonInput:String;
+  @:optional var folder:String;
+  @:optional var difficulty:String;
+  @:optional var inputNoDiff:String;
+}
+
+typedef SwagSong =
+{
+  > SwagChart,
+  > SwagDifficulty,
+}
+
+typedef SCSwagProgress =
+{
+  var preconvert:SwagSong;
+  var convert:SwagSong;
+  var postconvert:SwagSong;
+}
+
+typedef SCSongMap =
+{
+  > SwagCharts,
+  > SwagDifficulties,
+}
+
+typedef SCCharts =
+{
+  var songName:String;
+  var songMap:SCSongMap;
 }

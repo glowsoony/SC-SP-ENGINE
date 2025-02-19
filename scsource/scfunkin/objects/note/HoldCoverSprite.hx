@@ -41,7 +41,7 @@ class HoldCoverSprite extends FunkinSCSprite
   public var coverData:HoldCoverData =
     {
       texture: null,
-      useRGBShader: (PlayState.SONG != null) ? !(PlayState.SONG.options.disableSplashRGB == true) : true,
+      useRGBShader: (PlayState.SONG != null) ? !(PlayState.SONG.getSongData('options').disableSplashRGB == true) : true,
       r: -1,
       g: -1,
       b: -1,
@@ -65,15 +65,15 @@ class HoldCoverSprite extends FunkinSCSprite
     if (PlayState.SONG != null)
     {
       // Check Stuff
-      changeHoldCover = (PlayState.SONG.options.holdCoverSkin != null
-        && PlayState.SONG.options.holdCoverSkin != "default"
-        && PlayState.SONG.options.holdCoverSkin != "holdCover"
-        && PlayState.SONG.options.holdCoverSkin != "");
+      changeHoldCover = (PlayState.SONG.getSongData('options').holdCoverSkin != null
+        && PlayState.SONG.getSongData('options').holdCoverSkin != "default"
+        && PlayState.SONG.getSongData('options').holdCoverSkin != "holdCover"
+        && PlayState.SONG.getSongData('options').holdCoverSkin != "");
 
-      holdCoverSkinNonRGB = PlayState.SONG.options.disableHoldCoversRGB;
+      holdCoverSkinNonRGB = PlayState.SONG.getSongData('options').disableHoldCoversRGB;
 
       // Before replace
-      holdCoverSkin = (changeHoldCover ? PlayState.SONG.options.holdCoverSkin : 'holdCover');
+      holdCoverSkin = (changeHoldCover ? PlayState.SONG.getSongData('options').holdCoverSkin : 'holdCover');
     }
     this.skin = holdCoverSkin;
 
@@ -109,7 +109,8 @@ class HoldCoverSprite extends FunkinSCSprite
     this.antialiasing = ClientPrefs.data.antialiasing;
     if (skin.contains('pixel') || !ClientPrefs.data.antialiasing) this.antialiasing = false;
     var tempShader:RGBPalette = null;
-    if ((note == null || this.coverData.useRGBShader) && (PlayState.SONG == null || !PlayState.SONG.options.disableHoldCoversRGB))
+    if ((note == null || this.coverData.useRGBShader)
+      && (PlayState.SONG == null || !PlayState.SONG.getSongData('options').disableHoldCoversRGB))
     {
       // If Splash RGB is enabled:
       if (note != null)

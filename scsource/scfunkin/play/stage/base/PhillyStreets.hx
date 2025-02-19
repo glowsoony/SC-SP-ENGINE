@@ -164,7 +164,7 @@ class PhillyStreets extends BaseStage
 
   override function createPost()
   {
-    var _song = PlayState.SONG.gameOverData;
+    var _song:GameOverData = PlayState.SONG.getSongData('gameOverData');
     if (_song.gameOverSound == null || _song.gameOverSound.trim().length < 1) GameOverSubstate.deathSoundName = 'fnf_loss_sfx-pico';
     if (_song.gameOverLoop == null || _song.gameOverLoop.trim().length < 1) GameOverSubstate.loopSoundName = 'gameOver-pico';
     if (_song.gameOverEnd == null || _song.gameOverEnd.trim().length < 1) GameOverSubstate.endSoundName = 'gameOverEnd-pico';
@@ -394,7 +394,9 @@ class PhillyStreets extends BaseStage
 
   function updateABotEye(finishInstantly:Bool = false)
   {
-    if (PlayState.SONG.notes[Std.int(FlxMath.bound(curSection, 0, PlayState.SONG.notes.length - 1))].mustHitSection == true) abot.lookRight();
+    if (PlayState.SONG.getSongData('notes')[
+      Std.int(FlxMath.bound(curSection, 0, PlayState.SONG.getSongData('notes').length - 1))
+    ].mustHitSection == true) abot.lookRight();
     else
       abot.lookLeft();
 
@@ -549,14 +551,14 @@ class PhillyStreets extends BaseStage
     switch (currentNeneState)
     {
       case STATE_DEFAULT:
-        if (game.health <= VULTURE_THRESHOLD)
+        if (game.hud.health <= VULTURE_THRESHOLD)
         {
           currentNeneState = STATE_PRE_RAISE;
           gf.skipDance = true;
         }
 
       case STATE_PRE_RAISE:
-        if (game.health > VULTURE_THRESHOLD)
+        if (game.hud.health > VULTURE_THRESHOLD)
         {
           currentNeneState = STATE_DEFAULT;
           gf.skipDance = false;
@@ -578,7 +580,7 @@ class PhillyStreets extends BaseStage
         }
 
       case STATE_READY:
-        if (game.health > VULTURE_THRESHOLD)
+        if (game.hud.health > VULTURE_THRESHOLD)
         {
           currentNeneState = STATE_LOWER;
           gf.playAnim('lowerKnife');
@@ -948,7 +950,7 @@ class PhillyStreets extends BaseStage
         picoFlicker = null;
 
         boyfriend.animation.finishCallback = function(name:String) {
-          if (name == 'shootMISS' && game.health > 0.0 && !game.practiceMode && game.gameOverTimer == null)
+          if (name == 'shootMISS' && game.hud.health > 0.0 && !game.practiceMode && game.gameOverTimer == null)
           {
             // FlxFlicker was crashing so fuck it, FlxTimer all the way
             picoFlicker = new FlxTimer().start(1 / 30, function(tmr:FlxTimer) {
@@ -971,8 +973,8 @@ class PhillyStreets extends BaseStage
           boyfriend.animation.finishCallback = null;
         }
 
-        game.health -= 0.4;
-        if (game.health <= 0.0 && !game.practiceMode)
+        game.hud.health -= 0.4;
+        if (game.hud.health <= 0.0 && !game.practiceMode)
         {
           GameOverSubstate.deathSoundName = 'fnf_loss_sfx-pico-explode';
           GameOverSubstate.loopSoundName = 'gameOverStart-pico-explode';

@@ -31,6 +31,7 @@ import scfunkin.play.input.Controls;
 import scfunkin.play.stage.*;
 import scfunkin.play.song.Song;
 import scfunkin.play.song.data.SongData;
+import scfunkin.play.song.data.SongJsonData;
 import scfunkin.play.song.data.Difficulty;
 // Psych-UI
 import scfunkin.backend.ui.*;

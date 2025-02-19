@@ -30,6 +30,12 @@ import scfunkin.objects.ui.scripting.ModchartAnimateSprite;
 import haxe.PosInfos;
 import tjson.TJSON as Json;
 import lime.app.Application;
+#if HSCRIPT_ALLOWED
+import crowplexus.iris.Iris;
+import crowplexus.hscript.Expr.Error as IrisError;
+import crowplexus.hscript.Printer;
+import scfunkin.backend.scripting.psych.HScript.HScriptInfos;
+#end
 
 typedef LuaCamera =
 {
@@ -101,11 +107,16 @@ class FunkinLua
         {
           hscript.scriptCode = code;
           hscript.parse(true);
+          var ret:Dynamic = hscript.execute();
+          hscript.returnValue = ret;
         }
       }
-      catch (e)
+      catch (e:IrisError)
       {
-        throw e;
+        var pos:HScriptInfos = cast hscript.interp.posInfos();
+        pos.isLua = true;
+        Iris.error(Printer.errorToString(e, false), pos);
+        hscript.returnValue = null;
       }
       hscript.varsToBring = varsToBring;
       if (instance != null) hscript.changeInstance(instance);
@@ -176,22 +187,22 @@ class FunkinLua
     set('curBpm', Conductor.bpm);
     if (PlayState.SONG != null)
     {
-      set('bpm', PlayState.SONG.bpm);
-      set('scrollSpeed', PlayState.SONG.speed);
+      set('bpm', PlayState.SONG.getSongData('bpm'));
+      set('scrollSpeed', PlayState.SONG.getSongData('speed'));
     }
     set('crochet', Conductor.crochet);
     set('stepCrochet', Conductor.stepCrochet);
     set('songLength', 0);
     if (PlayState.SONG != null)
     {
-      set('songName', PlayState.SONG.songId);
-      set('songPath', Paths.formatToSongPath(PlayState.SONG.songId));
+      set('songName', PlayState.SONG.getSongData('songId'));
+      set('songPath', Paths.formatToSongPath(PlayState.SONG.getSongData('songId')));
     }
-    set('loadedSongName', Song.loadedSongName);
-    set('loadedSongPath', Paths.formatToSongPath(Song.loadedSongName));
-    set('chartPath', Song.chartPath);
+    set('loadedSongName', SongJsonData.loadedSongName);
+    set('loadedSongPath', Paths.formatToSongPath(SongJsonData.loadedSongName));
+    set('chartPath', SongJsonData.chartPath);
     set('startedCountdown', false);
-    if (PlayState.SONG != null) set('curStage', PlayState.SONG.stage);
+    if (PlayState.SONG != null) set('curStage', PlayState.SONG.getSongData('stage'));
 
     set('isStoryMode', PlayState.isStoryMode);
     set('difficulty', PlayState.storyDifficulty);
@@ -201,7 +212,7 @@ class FunkinLua
     set('weekRaw', PlayState.storyWeek);
     set('week', WeekData.weeksList[PlayState.storyWeek]);
     set('seenCutscene', PlayState.seenCutscene);
-    set('hasVocals', PlayState.SONG.needsVoices);
+    set('hasVocals', PlayState.SONG.getSongData('needsVoices'));
 
     // Screen stuff
     set('screenWidth', FlxG.width);
@@ -209,7 +220,7 @@ class FunkinLua
 
     if (game != null) @:privateAccess
     {
-      var curSection:SwagSection = PlayState.SONG.notes[game.curSection];
+      var curSection:SwagSection = PlayState.SONG.getSongData('notes')[game.curSection];
       // PlayState variables
       set('curSection', game.curSection);
       set('curBeat', game.curBeat);
@@ -276,10 +287,11 @@ class FunkinLua
       set('defaultMomX', game.MOM_X);
       set('defaultMomY', game.MOM_Y);
 
-      set('boyfriendName', game.boyfriend != null ? game.boyfriend.curCharacter : PlayState.SONG != null ? PlayState.SONG.characters.player : 'bf');
-      set('dadName', game.dad != null ? game.dad.curCharacter : PlayState.SONG != null ? PlayState.SONG.characters.opponent : 'dad');
-      set('gfName', game.gf != null ? game.gf.curCharacter : PlayState.SONG != null ? PlayState.SONG.characters.girlfriend : 'bf');
-      set('momName', game.mom != null ? game.mom.curCharacter : PlayState.SONG != null ? PlayState.SONG.characters.secondOpponent : 'mom');
+      set('boyfriendName',
+        game.boyfriend != null ? game.boyfriend.curCharacter : PlayState.SONG != null ? PlayState.SONG.getSongData('characters').player : 'bf');
+      set('dadName', game.dad != null ? game.dad.curCharacter : PlayState.SONG != null ? PlayState.SONG.getSongData('characters').opponent : 'dad');
+      set('gfName', game.gf != null ? game.gf.curCharacter : PlayState.SONG != null ? PlayState.SONG.getSongData('characters').girlfriend : 'bf');
+      set('momName', game.mom != null ? game.mom.curCharacter : PlayState.SONG != null ? PlayState.SONG.getSongData('characters').secondOpponent : 'mom');
     }
 
     // Other settings
@@ -749,11 +761,16 @@ class FunkinLua
       });
 
       set("loadSong", function(?name:String = null, ?difficultyNum:Int = -1) {
-        if (name == null || name.length < 1) name = Song.loadedSongName;
+        if (name == null || name.length < 1) name = SongJsonData.loadedSongName;
         if (difficultyNum == -1) difficultyNum = PlayState.storyDifficulty;
 
-        final poop = Highscore.formatSong(name, difficultyNum);
-        Song.loadFromJson(poop, name);
+        final songInput = Highscore.formatSong(name, difficultyNum);
+        SongJsonData.loadFromJson({
+          jsonInput: songInput,
+          folder: name,
+          difficulty: Difficulty.getFilePath(difficultyNum),
+          inputNoDiff: songInput.replace(Difficulty.getFilePath(difficultyNum), '')
+        });
         PlayState.storyDifficulty = difficultyNum;
         MusicBeatState.switchState(new PlayState());
 
@@ -1091,7 +1108,7 @@ class FunkinLua
       // others
       set("triggerEventLegacy",
         function(name:String, ?arg1:String = '', ?arg2:String = '', ?arg3:String = '', ?arg4:String = '', ?arg5:String = '', ?arg6:String = '') {
-          game.triggerEventLegacy(name, arg1, arg2, Conductor.songPosition, arg3, arg4, arg5, arg6);
+          game.songEvents.triggerEvent(name, [arg1, arg2, arg3, arg4, arg5, arg6], Conductor.songPosition);
           return true;
         });
 
@@ -1100,7 +1117,7 @@ class FunkinLua
         var args:Array<String> = [];
         for (i in 0...luaArgs.length)
           args.push(Std.string(luaArgs[i]));
-        game.triggerEvent(name, args, Conductor.songPosition);
+        game.songEvents.triggerEvent(name, args, Conductor.songPosition);
         return true;
       });
 
@@ -1567,7 +1584,7 @@ class FunkinLua
         if (!ClientPrefs.data.healthColor) return;
         final left_color:Null<FlxColor> = left != null && left.length > 0 ? CoolUtil.colorFromString(left) : null;
         final right_color:Null<FlxColor> = right != null && right.length > 0 ? CoolUtil.colorFromString(right) : null;
-        if (PlayState.SONG.options.oldBarSystem)
+        if (PlayState.SONG.getSongData('options').oldBarSystem)
         {
           if (!ClientPrefs.data.gradientSystemForOldBars) game.hud.healthBar.createFilledBar(left_color, right_color);
           else
@@ -1583,7 +1600,7 @@ class FunkinLua
       set("setTimeBarColors", function(left:String, right:String) {
         final left_color:Null<FlxColor> = left != null && left.length > 0 ? CoolUtil.colorFromString(left) : null;
         final right_color:Null<FlxColor> = right != null && right.length > 0 ? CoolUtil.colorFromString(right) : null;
-        if (PlayState.SONG.options.oldBarSystem)
+        if (PlayState.SONG.getSongData('options').oldBarSystem)
         {
           if (ClientPrefs.data.colorBarType == 'No Colors') game.hud.timeBar.createFilledBar(FlxColor.fromString(Std.string(right)),
             FlxColor.fromString(Std.string(left)));
@@ -1665,7 +1682,7 @@ class FunkinLua
       });
       set("startDialogue", function(dialogueFile:String, ?music:String = null) {
         var path:String;
-        var songPath:String = Paths.formatToSongPath(Song.loadedSongName);
+        var songPath:String = Paths.formatToSongPath(SongJsonData.loadedSongName);
         #if TRANSLATIONS_ALLOWED
         path = Paths.getPath('data/songs/$songPath/${dialogueFile}_${ClientPrefs.data.language}.json', TEXT);
         #if MODS_ALLOWED

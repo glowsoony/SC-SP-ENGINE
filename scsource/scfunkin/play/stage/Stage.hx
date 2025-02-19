@@ -1291,13 +1291,6 @@ class Stage extends scfunkin.play.stage.base.BaseStage
 
     if (defaultStage != null) defaultStage.destroy();
 
-    for (sprite in swagBacks.keys())
-    {
-      if (swagBacks[sprite] != null) swagBacks[sprite].destroy();
-    }
-
-    swagBacks.clear();
-
     #if HSCRIPT_ALLOWED
     for (script in hscriptArray)
       if (script != null)
@@ -1326,6 +1319,13 @@ class Stage extends scfunkin.play.stage.base.BaseStage
     codeNameScripts = null;
     #end
     #end
+
+    for (sprite in swagBacks.keys())
+    {
+      if (swagBacks[sprite] != null) swagBacks[sprite].destroy();
+    }
+
+    swagBacks.clear();
 
     while (toAdd.length > 0)
     {

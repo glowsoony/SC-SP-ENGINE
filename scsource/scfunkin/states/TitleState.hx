@@ -203,8 +203,6 @@ class TitleState extends MusicBeatState
     add(grayGrad);
     add(grayGrad2);
 
-    scfunkin.debug.Debug.logInfo('Is Funkin Defined');
-
     gf = new FlxSprite(gfPosition.x, gfPosition.y);
     gf.antialiasing = ClientPrefs.data.antialiasing;
     gf.alpha = 0.0001;

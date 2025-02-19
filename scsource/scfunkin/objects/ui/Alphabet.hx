@@ -274,7 +274,7 @@ class AlphaCharacter extends FlxSprite
     allLetters = new Map<String, Null<Letter>>();
     try
     {
-      var data:Dynamic = #if MODS_ALLOWED Json.parse(File.getContent(path)) #else Json.parse(Assets.getText(path)) #end;
+      var data:Dynamic = Json.parse(#if MODS_ALLOWED File.getContent(path) #else Assets.getText(path) #end);
 
       if (data.allowed != null && data.allowed.length > 0)
       {
@@ -376,28 +376,6 @@ class AlphaCharacter extends FlxSprite
       }
     }
     updateHitbox();
-  }
-
-  public var prevY:Float = 0;
-  public var elapsedTotal:Float = 0;
-  public var number:Int = 0;
-
-  override public function update(elapsed:Float)
-  {
-    super.update(elapsed);
-
-    // i love math
-    if (elapsed > 0) displacementFormula(elapsed);
-  }
-
-  public function displacementFormula(elapsed:Float)
-  {
-    elapsedTotal += elapsed;
-    var elapsedAverage:Float = (1 / FlxG.drawFramerate);
-    var formula:Float = Math.sin(Math.PI * (elapsedTotal + ((number * elapsedAverage) * 24))) * 1.5 * ((elapsed / (1 / 120)) / 16);
-    prevY += y;
-    y = prevY + formula;
-    prevY -= y + formula;
   }
 
   public static function isTypeAlphabet(c:String) // thanks kade

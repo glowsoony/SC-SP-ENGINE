@@ -396,10 +396,10 @@ class MainMenuState extends MusicBeatState
                 OptionsState.onPlayState = false;
                 if (PlayState.SONG != null)
                 {
-                  PlayState.SONG.options.arrowSkin = null;
-                  PlayState.SONG.options.splashSkin = null;
-                  PlayState.SONG.options.strumSkin = null;
-                  PlayState.SONG.options.holdCoverSkin = null;
+                  PlayState.SONG.getSongData('options').arrowSkin = null;
+                  PlayState.SONG.getSongData('options').splashSkin = null;
+                  PlayState.SONG.getSongData('options').strumSkin = null;
+                  PlayState.SONG.getSongData('options').holdCoverSkin = null;
                   PlayState.stageUI = 'normal';
                 }
             }

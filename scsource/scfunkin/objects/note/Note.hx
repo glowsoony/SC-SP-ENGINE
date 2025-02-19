@@ -135,7 +135,7 @@ class Note extends FunkinSCSprite implements ICloneable<Note>
       texture: null,
       antialiasing: !PlayState.isPixelStage,
       useGlobalShader: false,
-      useRGBShader: (PlayState.SONG != null) ? !(PlayState.SONG.options.disableSplashRGB == true) : true,
+      useRGBShader: (PlayState.SONG != null) ? !(PlayState.SONG.getSongData('options').disableSplashRGB == true) : true,
       useNoteRGB: true,
       a: ClientPrefs.data.splashAlpha,
       r: -1,
@@ -405,7 +405,7 @@ class Note extends FunkinSCSprite implements ICloneable<Note>
     {
       rgbShader = new RGBShaderReference(this, customColoredNotes ? initializeGlobalQuantRGBShader(data.noteData) : initializeGlobalRGBShader(data.noteData));
       texture = data.noteSkin;
-      if (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB) rgbShader.enabled = false;
+      if (PlayState.SONG != null && PlayState.SONG.getSongData('options').disableNoteRGB) rgbShader.enabled = false;
 
       x += swagWidth * data.noteData;
       if (!isSustainNote && noteData < colArray.length)
@@ -605,7 +605,7 @@ class Note extends FunkinSCSprite implements ICloneable<Note>
               }
               else
               {
-                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB);
+                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.getSongData('options').disableNoteRGB);
                 pixelSusPath = noteSkinNonRGB ? 'pixelUI/NOTE_assetsENDS' : 'pixelUI/noteSkins/NOTE_assetsENDS' + getNoteSkinPostfix();
                 pixelPath = noteSkinNonRGB ? 'pixelUI/NOTE_assets' : 'pixelUI/noteSkins/NOTE_assets' + getNoteSkinPostfix();
               }
@@ -633,7 +633,7 @@ class Note extends FunkinSCSprite implements ICloneable<Note>
               else if (secondPathFound) notePath = noteStyleType;
               else
               {
-                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableNoteRGB);
+                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.getSongData('options').disableNoteRGB);
                 notePath = noteSkinNonRGB ? "NOTE_assets" : "noteSkins/NOTE_assets" + getNoteSkinPostfix();
               }
 
@@ -846,7 +846,7 @@ class Note extends FunkinSCSprite implements ICloneable<Note>
 
     final bpmChanges = Conductor.bpmChangeMap;
     var time:Float = 0;
-    var currentBPM:Float = PlayState.SONG.bpm;
+    var currentBPM:Float = PlayState.SONG.getSongData('bpm');
     var newTime:Float = 0;
     var beat:Float = 0;
     var colR:FlxColor = 0x000000;

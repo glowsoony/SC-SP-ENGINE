@@ -169,7 +169,7 @@ class ShaderFunctions
     });
 
     funk.set("initShaderFromSource", function(name:String, classString:String) {
-      var shaderClass = Type.resolveClass('shaders.' + classString);
+      var shaderClass = Type.resolveClass('scfunkin.shaders.' + classString);
       if (shaderClass != null)
       {
         var shad = Type.createInstance(shaderClass, []);

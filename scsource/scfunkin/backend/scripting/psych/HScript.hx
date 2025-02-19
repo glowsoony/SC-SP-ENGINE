@@ -8,11 +8,23 @@ import crowplexus.iris.Iris;
 import crowplexus.iris.IrisConfig;
 import crowplexus.iris.ErrorSeverity;
 import crowplexus.hscript.Expr.Error as IrisError;
+import crowplexus.hscript.Printer;
+
+typedef HScriptInfos =
+{
+  > haxe.PosInfos,
+  var ?funcName:String;
+  var ?showLine:Null<Bool>;
+  #if LUA_ALLOWED
+  var ?isLua:Null<Bool>;
+  #end
+}
 
 class HScript extends Iris
 {
   public var filePath:String;
   public var modFolder:String;
+  public var returnValue:Dynamic;
   public var executed:Bool = false;
   #if LUA_ALLOWED
   public var parentLua:FunkinLua;
@@ -127,11 +139,8 @@ class HScript extends Iris
     #if LUA_ALLOWED
     if (scriptName == null && parent != null) scriptName = parent.scriptName;
     #end
-    this.varsToBring = varsToBring;
-    this.scriptCode = scriptThing;
     super(scriptThing, new IrisConfig(scriptName, false, false));
     changeInstance(parentInstance);
-    Iris.logLevel = hscriptLog;
 
     #if LUA_ALLOWED
     parentLua = parent;
@@ -141,23 +150,22 @@ class HScript extends Iris
       this.modFolder = parent.modFolder;
     }
     #end
+    preset();
+    this.scriptCode = scriptThing;
+    this.varsToBring = varsToBring;
     if (!manualRun)
     {
-      var _active:Bool = tryRunning();
-      if (_active == false) return;
-    }
-    Iris.warn = function(x, ?pos:haxe.PosInfos) {
-      if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.YELLOW);
-      Iris.logLevel(WARN, x, pos);
-    }
-    Iris.error = function(x, ?pos:haxe.PosInfos) {
-      if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.ORANGE);
-
-      Iris.logLevel(ERROR, x, pos);
-    }
-    Iris.fatal = function(x, ?pos:haxe.PosInfos) {
-      if (PlayState.instance != null) PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.RED);
-      Iris.logLevel(FATAL, x, pos);
+      try
+      {
+        var ret:Dynamic = execute();
+        returnValue = ret;
+      }
+      catch (e:IrisError)
+      {
+        returnValue = null;
+        this.destroy();
+        throw e;
+      }
     }
   }
 
@@ -679,7 +687,21 @@ class HScript extends Iris
 
 class CustomInterp extends crowplexus.hscript.Interp
 {
-  public var parentInstance:Dynamic;
+  public var parentInstance(default, set):Dynamic = [];
+
+  private var _instanceFields:Array<String>;
+
+  function set_parentInstance(inst:Dynamic):Dynamic
+  {
+    parentInstance = inst;
+    if (parentInstance == null)
+    {
+      _instanceFields = [];
+      return inst;
+    }
+    _instanceFields = Type.getInstanceFields(Type.getClass(inst));
+    return inst;
+  }
 
   public function new()
   {
@@ -706,7 +728,7 @@ class CustomInterp extends crowplexus.hscript.Interp
       return v;
     }
 
-    if (parentInstance != null)
+    if (parentInstance != null && _instanceFields.contains(id))
     {
       var v = Reflect.getProperty(parentInstance, id);
       return v;

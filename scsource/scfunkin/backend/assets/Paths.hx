@@ -240,7 +240,6 @@ class Paths
 
   public static function freeGraphicsFromMemory(cache:Bool = true)
   {
-    if (!cache) return;
     var protectedGfx:Array<FlxGraphic> = [];
     function checkForGraphics(spr:Dynamic)
     {
@@ -252,7 +251,9 @@ class Paths
           // trace('is actually a group');
           for (member in grp)
           {
+            if (member == null) continue;
             checkForGraphics(member);
+            grp.remove(member);
           }
           return;
         }
@@ -270,9 +271,18 @@ class Paths
       // catch(haxe.Exception) {}
     }
     for (member in FlxG.state.members)
-      checkForGraphics(member);
-    if (FlxG.state.subState != null) for (member in FlxG.state.subState.members)
-      checkForGraphics(member);
+    {
+      if (member != null) checkForGraphics(member);
+      FlxG.state.remove(member, true);
+    }
+    if (FlxG.state.subState != null)
+    {
+      for (member in FlxG.state.subState.members)
+      {
+        if (member != null) checkForGraphics(member);
+        FlxG.state.subState.remove(member, true);
+      }
+    }
     for (key in currentTrackedAssets.keys())
     {
       // if it is not currently contained within the used local assets

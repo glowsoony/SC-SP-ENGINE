@@ -208,10 +208,10 @@ class StageData
 
   public static var forceNextDirectory:String = null;
 
-  public static function loadDirectory(SONG:SwagSong)
+  public static function loadDirectory(SONG:Song)
   {
-    final stage:String = if (SONG.stage != null) SONG.stage else if (Song.loadedSongName != null)
-      vanillaSongStage(Paths.formatToSongPath(Song.loadedSongName)) else 'mainStage';
+    final stage:String = if (SONG.getSongData('stage') != null) SONG.getSongData('stage') else if (SongJsonData.loadedSongName != null)
+      vanillaSongStage(Paths.formatToSongPath(SongJsonData.loadedSongName)) else 'mainStage';
 
     final stageFile:StageFile = getStageFile(stage);
     forceNextDirectory = (stageFile != null) ? stageFile.directory : ''; // preventing crashes

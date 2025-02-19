@@ -1,6 +1,5 @@
 package scfunkin.states.editors.content.charting;
 
-import scfunkin.play.song.Song;
 import scfunkin.play.song.data.SongData;
 import scfunkin.play.song.data.Difficulty;
 import flixel.math.FlxMath;
@@ -248,6 +247,8 @@ class VSlice
           needsVoices: true, // There's no value on V-Slice to identify if there are vocals as it checks automatically
           speed: scrollSpeed,
           offset: 0,
+          strumLineIds: [0, 1],
+          totalColumns: 4,
 
           characters:
             {

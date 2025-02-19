@@ -135,9 +135,9 @@ class ConductorUpdater
     var lastSection:Int = curSection;
     curSection = 0;
     stepsToDo = 0;
-    for (i in 0...PlayState.SONG.notes.length)
+    for (i in 0...PlayState.SONG.getSongData('notes').length)
     {
-      if (PlayState.SONG.notes[i] != null)
+      if (PlayState.SONG.getSongData('notes')[i] != null)
       {
         stepsToDo += Math.round(getBeatsOnSection() * 4);
         if (stepsToDo > curStep) break;
@@ -167,7 +167,8 @@ class ConductorUpdater
   public function getBeatsOnSection()
   {
     var val:Null<Float> = 4;
-    if (PlayState.SONG != null && PlayState.SONG.notes[curSection] != null) val = PlayState.SONG.notes[curSection].sectionBeats;
+    if (PlayState.SONG != null
+      && PlayState.SONG.getSongData('notes')[curSection] != null) val = PlayState.SONG.getSongData('notes')[curSection].sectionBeats;
     return val == null ? 4 : val;
   }
 }
@@ -239,7 +240,7 @@ class Conductor
     return lastChange;
   }
 
-  public static function getBPMFromStep(step:Float)
+  public static function getBPMFromStep(step:Float):BPMChangeEvent
   {
     var lastChange:BPMChangeEvent =
       {
@@ -288,11 +289,11 @@ class Conductor
   }
 
   // Troll Engine styled mapBPMChanges
-  public static function mapBPMChanges(song:SwagSong)
+  public static function mapBPMChanges(song:Song)
   {
     bpmChangeMap = [];
 
-    var curBPM:Float = song.bpm;
+    var curBPM:Float = song.getSongData('bpm');
     var totalSteps:Int = 0;
     var totalPos:Float = 0;
 
@@ -309,10 +310,11 @@ class Conductor
       curBPM = newBPM;
     }
 
-    var firstSec = song.notes[0];
-    if (firstSec == null || !firstSec.changeBPM) pushChange(song.bpm);
+    var notes:Array<SwagSection> = song.getSongData('notes');
+    var firstSec = notes[0];
+    if (firstSec == null || !firstSec.changeBPM) pushChange(song.getSongData('bpm'));
 
-    for (section in song.notes)
+    for (section in notes)
     {
       if (section.changeBPM) pushChange(section.bpm);
 

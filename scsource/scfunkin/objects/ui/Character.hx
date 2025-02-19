@@ -270,14 +270,14 @@ class Character extends FunkinSCSprite
   public var strumSkinStyleOfCharacter:String = 'noteSkins/NOTE_assets';
 
   /**
-   * change if bf and dad would idle to the beat of the song.
+   * change if bf and dad would idle to the some time during of the song.
    */
-  public var idleToBeat:Bool = true;
+  public var idleToTime:Bool = true;
 
   /**
    * how frequently bf and dad would play their idle animation(1 - every beat, 2 - every 2 beats and so on).
    */
-  public var idleBeat:Int = 1;
+  public var idleTime:Int = 1;
 
   /**
    * Current color. (A different way, not the true color of the sprite unless taken into affect!)
@@ -597,8 +597,8 @@ class Character extends FunkinSCSprite
     jsonScale = json.scale;
     jsonGraphicScale = json.graphicScale;
 
-    final defaultIfNotFoundArrowSkin:String = PlayState.SONG != null ? PlayState.SONG.options.arrowSkin : noteSkinStyleOfCharacter;
-    final defaultIfNotFoundStrumSkin:String = PlayState.SONG != null ? PlayState.SONG.options.strumSkin : strumSkinStyleOfCharacter;
+    final defaultIfNotFoundArrowSkin:String = PlayState.SONG != null ? PlayState.SONG.getSongData('options').arrowSkin : noteSkinStyleOfCharacter;
+    final defaultIfNotFoundStrumSkin:String = PlayState.SONG != null ? PlayState.SONG.getSongData('options').strumSkin : strumSkinStyleOfCharacter;
     noteSkin = (json.noteSkin != null ? json.noteSkin : defaultIfNotFoundArrowSkin);
     strumSkin = (json.strumSkin != null ? json.strumSkin : defaultIfNotFoundStrumSkin);
 
@@ -672,8 +672,8 @@ class Character extends FunkinSCSprite
     if (isPlayer && json.playerAnimations != null) animationsArray = json.playerAnimations;
 
     // Bound dancing varialbes
-    final defaultBeat:Int = Std.int(json.defaultBeat);
-    idleBeat = (!Math.isNaN(defaultBeat) && defaultBeat != 0) ? defaultBeat : 1;
+    final defaultTime:Int = Std.int(json.defaultTime);
+    idleTime = (!Math.isNaN(defaultTime) && defaultTime != 0) ? defaultTime : 1;
 
     if (json.useGFSpeed != null) useGFSpeed = json.useGFSpeed;
 
@@ -1062,17 +1062,17 @@ class Character extends FunkinSCSprite
     }
   }
 
-  public dynamic function beatDance(beat:Int):Bool
+  public dynamic function danceTime(time:Int):Bool
   {
     var dancing:Bool = false;
     if (!useGFSpeed)
     {
-      if (beat % idleBeat == 0) dancing = idleToBeat;
-      else if (beat % idleBeat != 0) dancing = isDancingType();
+      if (time % idleTime == 0) dancing = idleToTime;
+      else if (time % idleTime != 0) dancing = isDancingType();
       return dancing;
     }
     else
-      return (beat % gfSpeed == 0);
+      return (time % gfSpeed == 0);
     return false;
   }
 
@@ -1080,10 +1080,14 @@ class Character extends FunkinSCSprite
   {
     try
     {
-      final songData:SwagSong = Song.getChart(json, Song.formattedSongName);
+      final songData:Song = new Song(SongJsonData.getChart({
+        jsonInput: json,
+        folder: SongJsonData.formattedSongName
+      })).loadFromCurrentSong();
       if (songData != null)
       {
-        for (section in songData.notes)
+        final notes:Array<SwagSection> = songData.getSongData('notes');
+        for (section in notes)
           for (songNotes in section.sectionNotes)
             animationNotes.push(songNotes);
       }
@@ -2056,10 +2060,10 @@ typedef CharacterFile =
   var ?vocals_file:String;
 
   /**
-   * Idle defualt beat
+   * Idle defualt time
    * @default 1
    */
-  var ?defaultBeat:Int;
+  var ?defaultTime:Int;
 
   /**
    * What type of character is it? DAD, BF, GF, OTHER

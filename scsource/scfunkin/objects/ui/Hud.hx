@@ -171,7 +171,7 @@ class Hud extends FlxGroup
     timeBarNew.alpha = 0;
     timeBarNew.visible = !game.showCaseMode ? showTime : false;
 
-    if (PlayState.SONG.options.oldBarSystem)
+    if (PlayState.SONG.getSongData('options').oldBarSystem)
     {
       add(timeBarBG);
       add(timeBar);
@@ -303,7 +303,7 @@ class Hud extends FlxGroup
 
     if (whichHud == 'HITMANS')
     {
-      if (PlayState.SONG.options.oldBarSystem)
+      if (PlayState.SONG.getSongData('options').oldBarSystem)
       {
         add(healthBarHit);
         add(healthBarHitBG);
@@ -313,7 +313,7 @@ class Hud extends FlxGroup
     }
     else
     {
-      if (PlayState.SONG.options.oldBarSystem)
+      if (PlayState.SONG.getSongData('options').oldBarSystem)
       {
         add(healthBarBG);
         add(healthBar);
@@ -357,7 +357,7 @@ class Hud extends FlxGroup
 
   public dynamic function updateHealthColors(colorsUsed:Bool, gradientSystem:Bool)
   {
-    if (PlayState.SONG.options.oldBarSystem)
+    if (PlayState.SONG.getSongData('options').oldBarSystem)
     {
       if (!gradientSystem)
       {
@@ -399,7 +399,7 @@ class Hud extends FlxGroup
   {
     updateHealthColors(ClientPrefs.data.healthColor, ClientPrefs.data.gradientSystemForOldBars);
 
-    if (PlayState.SONG.options.oldBarSystem)
+    if (PlayState.SONG.getSongData('options').oldBarSystem)
     {
       if (ClientPrefs.data.colorBarType == 'Main Colors') timeBar.createGradientBar([FlxColor.BLACK], [
         FlxColor.fromString(game.boyfriend.iconColorFormatted),
@@ -468,7 +468,8 @@ class Hud extends FlxGroup
       }
     }
 
-    health = PlayState.SONG.options.oldBarSystem ? (healthSet ? 1 : (health > maxHealth ? maxHealth : health)) : (healthSet ? 1 : (healthBarNew.bounds.max != null ? (health > healthBarNew.bounds.max ? healthBarNew.bounds.max : health) : (health > maxHealth ? maxHealth : health)));
+    health = PlayState.SONG.getSongData('options')
+      .oldBarSystem ? (healthSet ? 1 : (health > maxHealth ? maxHealth : health)) : (healthSet ? 1 : (healthBarNew.bounds.max != null ? (health > healthBarNew.bounds.max ? healthBarNew.bounds.max : health) : (health > maxHealth ? maxHealth : health)));
     healthLerp = FlxMath.lerp(healthLerp, (health * 50), (elapsed * 10));
     if (healthLerps)
     {
@@ -485,9 +486,9 @@ class Hud extends FlxGroup
     }
     else
     {
-      var healthPercent = PlayState.SONG.options.oldBarSystem ? FlxMath.remapToRange(healthBar.percent, 0, 100, 100,
-        0) : FlxMath.remapToRange(healthBarNew.percent, 0, 100, 100, 0);
-      var addedIconX = PlayState.SONG.options.oldBarSystem ? healthBar.x + (healthBar.width * (healthPercent * 0.01)) : healthBarNew.x
+      var healthPercent = PlayState.SONG.getSongData('options')
+        .oldBarSystem ? FlxMath.remapToRange(healthBar.percent, 0, 100, 100, 0) : FlxMath.remapToRange(healthBarNew.percent, 0, 100, 100, 0);
+      var addedIconX = PlayState.SONG.getSongData('options').oldBarSystem ? healthBar.x + (healthBar.width * (healthPercent * 0.01)) : healthBarNew.x
         + (healthBarNew.width * (healthPercent * 0.01));
 
       if (!iconP1.overrideIconPlacement) iconP1.x = addedIconX + (150 * iconP1.scale.x - 150) / 2 - iconOffset;
@@ -530,7 +531,7 @@ class Hud extends FlxGroup
 
   public dynamic function tweenInTimeBar()
   {
-    if (PlayState.SONG.options.oldBarSystem)
+    if (PlayState.SONG.getSongData('options').oldBarSystem)
     {
       FlxTween.tween(timeBarBG, {alpha: 1}, 0.5, {ease: FlxEase.circOut});
       FlxTween.tween(timeBar, {alpha: 1}, 0.5, {ease: FlxEase.circOut});
@@ -592,7 +593,8 @@ class Hud extends FlxGroup
   {
     if (opponent)
     {
-      note.canSplash = ((!note.noteSplashData.disabled && ClientPrefs.splashOption('Opponent')) && !PlayState.SONG.options.notITG);
+      note.canSplash = ((!note.noteSplashData.disabled && ClientPrefs.splashOption('Opponent'))
+        && !PlayState.SONG.getSongData('options').notITG);
       if (note.canSplash)
       {
         strumLine.spawnSplash(
@@ -624,7 +626,7 @@ class Hud extends FlxGroup
       daRating.count++;
 
       note.canSplash = ((!note.noteSplashData.disabled && ClientPrefs.splashOption('Player') && daRating.doNoteSplash)
-        && !PlayState.SONG.options.notITG);
+        && !PlayState.SONG.getSongData('options').notITG);
       if (note.canSplash)
       {
         strumLine.spawnSplash(
@@ -919,7 +921,7 @@ class Hud extends FlxGroup
   {
     if (opponentColor == null && playerColor == null) return;
 
-    if (PlayState.SONG.options.oldBarSystem)
+    if (PlayState.SONG.getSongData('options').oldBarSystem)
     {
       if (!ClientPrefs.data.gradientSystemForOldBars) healthBar.createFilledBar(opponentColor, playerColor);
       else

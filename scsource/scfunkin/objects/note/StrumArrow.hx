@@ -79,7 +79,7 @@ class StrumArrow extends FunkinSCSprite
     direction = 90;
     rgbShader = new RGBShaderReference(this, !customColoredNotes ? Note.initializeGlobalRGBShader(leData) : Note.initializeGlobalQuantRGBShader(leData));
     rgbShader.enabled = false;
-    if (PlayState.SONG != null && PlayState.SONG.options.disableStrumRGB) useRGBShader = false;
+    if (PlayState.SONG != null && PlayState.SONG.getSongData('options').disableStrumRGB) useRGBShader = false;
 
     var arr:Array<FlxColor> = !customColoredNotes ? ClientPrefs.data.arrowRGB[leData] : ClientPrefs.data.arrowRGBQuantize[leData];
     if (texture.contains('pixel') || style.contains('pixel') || containsPixelTexture) arr = ClientPrefs.data.arrowRGBPixel[leData];
@@ -104,8 +104,8 @@ class StrumArrow extends FunkinSCSprite
 
     var skin:String = null;
     if (PlayState.SONG != null
-      && PlayState.SONG.options.strumSkin != null
-      && PlayState.SONG.options.strumSkin.length > 1) skin = PlayState.SONG.options.strumSkin;
+      && PlayState.SONG.getSongData('options').strumSkin != null
+      && PlayState.SONG.getSongData('options').strumSkin.length > 1) skin = PlayState.SONG.getSongData('options').strumSkin;
     else
       skin = Note.defaultNoteSkin;
 
@@ -216,7 +216,7 @@ class StrumArrow extends FunkinSCSprite
               }
               else
               {
-                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableStrumRGB);
+                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.getSongData('options').disableStrumRGB);
                 loadGraphic(Paths.image(noteSkinNonRGB ? 'pixelUI/NOTE_assets' : 'pixelUI/noteSkins/NOTE_assets' + Note.getNoteSkinPostfix(), strumPathLib,
                   !notITGStrums));
                 width = width / 4;
@@ -241,7 +241,7 @@ class StrumArrow extends FunkinSCSprite
               }
               else
               {
-                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.options.disableStrumRGB);
+                var noteSkinNonRGB:Bool = (PlayState.SONG != null && PlayState.SONG.getSongData('options').disableStrumRGB);
                 frames = Paths.getSparrowAtlas(noteSkinNonRGB ? 'NOTE_assets' : 'noteSkins/NOTE_assets' + Note.getNoteSkinPostfix(), strumPathLib,
                   !notITGStrums);
                 addAnims();

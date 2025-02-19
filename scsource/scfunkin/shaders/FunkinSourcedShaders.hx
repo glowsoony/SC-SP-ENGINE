@@ -6,6 +6,21 @@ package scfunkin.shaders;
 import flixel.math.FlxAngle;
 import openfl.Lib;
 
+class FunkinSourcedShaders
+{
+  public static var shadersMap:Map<String, ShaderBase> = [];
+
+  public function updateShaders(elapsed:Float)
+  {
+    for (shaderKey in shadersMap.keys())
+    {
+      final shader:ShaderBase = shadersMap.get(shaderKey);
+      if (shader == null) continue;
+      if (shader.canUpdate()) shader.update(elapsed);
+    }
+  }
+}
+
 // Effects A-Z WITH SHADERS -glow
 class AngelEffect extends ShaderBase
 {

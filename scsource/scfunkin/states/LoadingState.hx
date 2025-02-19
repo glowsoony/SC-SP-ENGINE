@@ -1,5 +1,7 @@
 package scfunkin.states;
 
+import lime.app.Future;
+import sys.thread.FixedThreadPool;
 import haxe.Json;
 import lime.utils.Assets;
 import openfl.display.BitmapData;
@@ -16,6 +18,12 @@ import scfunkin.objects.ui.Character;
 import scfunkin.objects.note.Note;
 import scfunkin.objects.note.NoteSplash;
 
+#if cpp
+@:headerCode('
+#include <iostream>
+#include <thread>
+')
+#end
 class LoadingState extends MusicBeatState
 {
   public static var loaded:Int = 0;
@@ -24,6 +32,7 @@ class LoadingState extends MusicBeatState
   static var originalBitmapKeys:Map<String, String> = [];
   static var requestedBitmaps:Map<String, BitmapData> = [];
   static var mutex:Mutex;
+  static var threadPool:FixedThreadPool = null;
 
   function new(target:FlxState, stopMusic:Bool)
   {
@@ -129,17 +138,26 @@ class LoadingState extends MusicBeatState
 
   function onLoad()
   {
-    loaded = 0;
-    loadMax = 0;
-    initialThreadCompleted = true;
+    _loaded();
 
     if (stopMusic && FlxG.sound.music != null) FlxG.sound.music.stop();
 
     FlxG.camera.visible = false;
-    FlxTransitionableState.skipNextTransIn = true;
     MusicBeatState.switchState(target);
     transitioning = true;
     finishedLoading = true;
+  }
+
+  static function _loaded()
+  {
+    loaded = 0;
+    loadMax = 0;
+    initialThreadCompleted = true;
+    isIntrusive = false;
+
+    FlxTransitionableState.skipNextTransIn = true;
+    if (threadPool != null) threadPool.shutdown(); // kill all workers safely
+    threadPool = null;
     mutex = null;
   }
 
@@ -169,21 +187,27 @@ class LoadingState extends MusicBeatState
     Debug.logInfo('Setting asset folder to ' + directory);
   }
 
+  static var isIntrusive:Bool = false;
+
   static function getNextState(target:FlxState, stopMusic = false, intrusive:Bool = true):FlxState
   {
+    LoadingState.isIntrusive = intrusive;
+    _startPool();
     loadNextDirectory();
+
     if (intrusive) return new LoadingState(target, stopMusic);
 
     if (stopMusic && FlxG.sound.music != null) FlxG.sound.music.stop();
 
     while (true)
     {
-      if (!checkLoaded())
+      if (checkLoaded())
       {
-        Sys.sleep(0.001);
+        _loaded();
+        break;
       }
       else
-        break;
+        Sys.sleep(0.001);
     }
     return target;
   }
@@ -203,10 +227,27 @@ class LoadingState extends MusicBeatState
   static var initialThreadCompleted:Bool = true;
   static var dontPreloadDefaultVoices:Bool = false;
 
-  static var Stage:Stage;
+  static function _startPool()
+  {
+    threadPool = new FixedThreadPool(#if MULTITHREADED_LOADING #if cpp getCPUThreadsCount() #else 8 #end #else 1 #end);
+  }
 
   public static function prepareToSong()
   {
+    if (PlayState.SONG == null)
+    {
+      imagesToPrepare = [];
+      soundsToPrepare = [];
+      musicToPrepare = [];
+      songsToPrepare = [];
+      loaded = 0;
+      loadMax = 0;
+      initialThreadCompleted = true;
+      isIntrusive = false;
+      return;
+    }
+
+    _startPool();
     imagesToPrepare = [];
     soundsToPrepare = [];
     musicToPrepare = [];
@@ -214,7 +255,7 @@ class LoadingState extends MusicBeatState
 
     initialThreadCompleted = false;
     var threadsCompleted:Int = 0;
-    var threadsMax:Int = 2;
+    var threadsMax:Int = 0;
     function completedThread()
     {
       threadsCompleted++;
@@ -226,37 +267,40 @@ class LoadingState extends MusicBeatState
       }
     }
 
-    final song:SwagSong = PlayState.SONG;
-    final folder:String = Paths.formatToSongPath(Song.loadedSongName);
-    Thread.create(() -> {
+    final song:Song = PlayState.SONG;
+    final folder:String = Paths.formatToSongPath(SongJsonData.loadedSongName);
+    new Future<Bool>(() -> {
       // LOAD NOTE IMAGE
       var noteSkin:String = Note.defaultNoteSkin;
-      if (song.options.arrowSkin != null && song.options.arrowSkin.length > 1) noteSkin = song.options.arrowSkin;
+      if (song.getSongData('options').arrowSkin != null
+        && song.getSongData('options').arrowSkin.length > 1) noteSkin = song.getSongData('options').arrowSkin;
 
       var customSkin:String = noteSkin + Note.getNoteSkinPostfix();
       if (Paths.fileExists('images/$customSkin.png', IMAGE)) noteSkin = customSkin;
-      if (!song.options.notITG && noteSkin.length > 0) imagesToPrepare.push(noteSkin);
+      if (!song.getSongData('options').notITG && noteSkin.length > 0) imagesToPrepare.push(noteSkin);
       //
 
       // LOAD NOTE SPLASH IMAGE
       var noteSplash:String = NoteSplash.defaultNoteSplash;
-      if (song.options.splashSkin != null && song.options.splashSkin.length > 0) noteSplash = song.options.splashSkin;
+      if (song.getSongData('options').splashSkin != null
+        && song.getSongData('options').splashSkin.length > 0) noteSplash = song.getSongData('options').splashSkin;
       else
         noteSplash += NoteSplash.getSplashSkinPostfix();
-      if (!song.options.notITG && noteSplash.length > 0) imagesToPrepare.push(noteSplash);
+      if (!song.getSongData('options').notITG && noteSplash.length > 0) imagesToPrepare.push(noteSplash);
       //
 
       // LOAD HOLD COVER IMAGE
       var holdCoverSkin:String = "";
-      if (song.options.holdCoverSkin != null && song.options.holdCoverSkin.length > 1) noteSkin = song.options.holdCoverSkin;
+      if (song.getSongData('options').holdCoverSkin != null
+        && song.getSongData('options').holdCoverSkin.length > 1) noteSkin = song.getSongData('options').holdCoverSkin;
       else
         holdCoverSkin = "holdCover";
 
       var pref:String = "";
       if (!holdCoverSkin.startsWith("HoldNoteEffect/")) pref = "HoldNoteEffect/";
-      if (!song.options.disableHoldCovers && !song.options.notITG && holdCoverSkin.length > 0)
+      if (!song.getSongData('options').disableHoldCovers && !song.getSongData('options').notITG && holdCoverSkin.length > 0)
       {
-        if (song.options.disableHoldCoversRGB) imagesToPrepare.push(pref + holdCoverSkin);
+        if (song.getSongData('options').disableHoldCoversRGB) imagesToPrepare.push(pref + holdCoverSkin);
         else
         {
           var colors:Array<String> = ["Purple", "Blue", "Green", "Purple"];
@@ -268,8 +312,9 @@ class LoadingState extends MusicBeatState
 
       // LOAD STRUM NOTE IMAGE
       var strumSkin:String = "";
-      if (song.options.strumSkin != null && song.options.strumSkin.length > 1) strumSkin = song.options.strumSkin;
-      if (!song.options.notITG && strumSkin.length > 0) imagesToPrepare.push(strumSkin);
+      if (song.getSongData('options').strumSkin != null
+        && song.getSongData('options').strumSkin.length > 1) strumSkin = song.getSongData('options').strumSkin;
+      if (!song.getSongData('options').notITG && strumSkin.length > 0) imagesToPrepare.push(strumSkin);
       //
 
       try
@@ -307,13 +352,11 @@ class LoadingState extends MusicBeatState
         }
       }
       catch (e:Dynamic) {}
-      completedThread();
-    });
+      return true;
+    }, isIntrusive).then((_) -> new Future<Bool>(() -> {
+      if (song.getSongData('stage') == null || song.getSongData('stage').length < 1) song.setSongData('stage', StageData.vanillaSongStage(folder));
 
-    Thread.create(() -> {
-      if (song.stage == null || song.stage.length < 1) song.stage = StageData.vanillaSongStage(folder);
-
-      final stageData:StageFile = StageData.getStageFile(song.stage);
+      final stageData:StageFile = StageData.getStageFile(song.getSongData('stage'));
       if (stageData != null)
       {
         var imgs:Array<String> = [];
@@ -351,22 +394,22 @@ class LoadingState extends MusicBeatState
       var prefixedInst:String = '';
       var prefixInst:String = '';
 
-      prefixedInst = (song.options.instrumentalPrefix != null ? song.options.instrumentalPrefix : '');
-      suffixedInst = (song.options.instrumentalSuffix != null ? song.options.instrumentalSuffix : '');
+      prefixedInst = (song.getSongData('options').instrumentalPrefix != null ? song.getSongData('options').instrumentalPrefix : '');
+      suffixedInst = (song.getSongData('options').instrumentalSuffix != null ? song.getSongData('options').instrumentalSuffix : '');
       prefixInst = '$folder/${prefixedInst}Inst${suffixedInst}';
 
       songsToPrepare.push(prefixInst);
 
-      var player1:String = song.characters.player;
-      var player2:String = song.characters.opponent;
-      var gfVersion:String = song.characters.girlfriend;
+      var player1:String = song.getSongData('characters').player;
+      var player2:String = song.getSongData('characters').opponent;
+      var gfVersion:String = song.getSongData('characters').girlfriend;
       var prefixedVocals:String = '';
       var suffixedVocals:String = '';
       var prefixVocals:String = '';
-      if (song.needsVoices)
+      if (song.getSongData('needsVoices'))
       {
-        prefixedVocals = (song.options.vocalsPrefix != null ? song.options.vocalsPrefix : '');
-        suffixedVocals = (song.options.vocalsSuffix != null ? song.options.vocalsSuffix : '');
+        prefixedVocals = (song.getSongData('options').vocalsPrefix != null ? song.getSongData('options').vocalsPrefix : '');
+        suffixedVocals = (song.getSongData('options').vocalsSuffix != null ? song.getSongData('options').vocalsSuffix : '');
         prefixVocals = '$folder/${prefixedVocals}Voices${suffixedVocals}';
       }
       else
@@ -374,7 +417,7 @@ class LoadingState extends MusicBeatState
       if (gfVersion == null) gfVersion = 'gf';
 
       dontPreloadDefaultVoices = false;
-      preloadCharacter(player1, song.characters.player, prefixVocals);
+      preloadCharacter(player1, song.getSongData('characters').player, prefixVocals);
       if (!dontPreloadDefaultVoices && prefixVocals != null)
       {
         if (Paths.fileExists('$prefixVocals-Player.${Paths.SOUND_EXT}', SOUND, false, 'songs')
@@ -395,20 +438,36 @@ class LoadingState extends MusicBeatState
       if (player2 != player1)
       {
         threadsMax++;
-        Thread.create(() -> {
-          preloadCharacter(player2, song.characters.opponent, prefixVocals);
+        threadPool.run(() -> {
+          try
+          {
+            preloadCharacter(player2, prefixVocals);
+          }
+          catch (e:Dynamic) {}
           completedThread();
         });
       }
       if (!stageData.hide_girlfriend && gfVersion != player2 && gfVersion != player1)
       {
         threadsMax++;
-        Thread.create(() -> {
-          preloadCharacter(gfVersion);
+        threadPool.run(() -> {
+          try
+          {
+            preloadCharacter(gfVersion);
+          }
+          catch (e:Dynamic) {}
           completedThread();
         });
       }
-      completedThread();
+      if (threadsCompleted == threadsMax)
+      {
+        clearInvalids();
+        startThreads();
+        initialThreadCompleted = true;
+      }
+      return true;
+    }, isIntrusive)).onError((err:Dynamic) -> {
+      Debug.logInfo('ERROR! while preparing song: $err');
     });
   }
 
@@ -470,6 +529,12 @@ class LoadingState extends MusicBeatState
     loaded = 0;
 
     // then start threads
+    _threadFunc();
+  }
+
+  static function _threadFunc()
+  {
+    _startPool();
     for (sound in soundsToPrepare)
       initThread(() -> preloadSound('sounds/$sound'), 'sound $sound');
     for (music in musicToPrepare)
@@ -484,20 +549,35 @@ class LoadingState extends MusicBeatState
 
   static function initThread(func:Void->Dynamic, traceData:String)
   {
-    Thread.create(() -> {
+    // trace('scheduled $func in threadPool');
+    #if debug
+    var threadSchedule = Sys.time();
+    #end
+    threadPool.run(() -> {
+      #if debug
+      var threadStart = Sys.time();
+      trace('$traceData took ${threadStart - threadSchedule}s to start preloading');
+      #end
+
       try
       {
-        if (func() != null) Debug.logInfo('finished preloading $traceData');
+        if (func() != null)
+        {
+          #if debug
+          var diff = Sys.time() - threadStart;
+          trace('finished preloading $traceData in ${diff}s');
+          #end
+        }
         else
-          Debug.logError('ERROR! fail on preloading $traceData');
+          trace('ERROR! fail on preloading $traceData ');
       }
       catch (e:Dynamic)
       {
-        Debug.logError('ERROR! fail on preloading $traceData');
+        trace('ERROR! fail on preloading $traceData: $e');
       }
-      mutex.tryAcquire();
+      // mutex.acquire();
       loaded++;
-      mutex.release();
+      // mutex.release();
     });
   }
 
@@ -616,19 +696,15 @@ class LoadingState extends MusicBeatState
 
     return null;
   }
-  /*public static function cacheStage(stage:String)
-    {
-      try
-      {
-        Debug.logInfo('preloaded stage is ' + stage);
-        var preloadStage:Stage = new Stage(stage, true, true);
-        preloadStage.setupStageProperties(stage, PlayState.SONG, true);
-        preloadStage.kill();
-        preloadStage = null;
-      }
-      catch(e:Dynamic)
-      {
-        Debug.logWarn('Error on $e');
-      }
-  }*/
+
+  #if cpp
+  @:functionCode('
+		return std::thread::hardware_concurrency();
+    	')
+  @:noCompletion
+  public static function getCPUThreadsCount():Int
+  {
+    return -1;
+  }
+  #end
 }

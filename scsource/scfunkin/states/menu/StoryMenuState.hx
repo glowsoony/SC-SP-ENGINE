@@ -375,7 +375,13 @@ class StoryMenuState extends MusicBeatState
         ComboStats.averageWeekScore = 0;
         ComboStats.averageWeekMisses = 0;
 
-        Song.loadFromJson(PlayState.storyPlaylist[0].toLowerCase() + diffic, PlayState.storyPlaylist[0].toLowerCase());
+        SongJsonData.loadFromJson(
+          {
+            jsonInput: PlayState.storyPlaylist[0].toLowerCase() + diffic,
+            folder: PlayState.storyPlaylist[0].toLowerCase(),
+            difficulty: diffic,
+            inputNoDiff: PlayState.storyPlaylist[0].toLowerCase()
+          });
       }
       catch (e:Dynamic)
       {
@@ -408,12 +414,6 @@ class StoryMenuState extends MusicBeatState
       var directory = StageData.forceNextDirectory;
       LoadingState.loadNextDirectory();
       StageData.forceNextDirectory = directory;
-      @:privateAccess
-      if (PlayState._lastLoadedModDirectory != Mods.currentModDirectory)
-      {
-        Debug.logInfo('CHANGED MOD DIRECTORY, RELOADING STUFF');
-        Paths.freeGraphicsFromMemory(false);
-      }
       LoadingState.prepareToSong();
       new FlxTimer().start(1, function(tmr:FlxTimer) {
         #if !SHOW_LOADING_SCREEN FlxG.sound.music.stop(); #end

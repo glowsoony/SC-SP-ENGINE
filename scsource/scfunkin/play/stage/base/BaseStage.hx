@@ -124,11 +124,11 @@ class BaseStage extends FlxBasic
 
   public function setDefaultGF(name:String) // Fix for the Chart Editor on Base Game stages
   {
-    var gfVersion:String = PlayState.SONG.characters.girlfriend;
+    var gfVersion:String = PlayState.SONG.getSongData('characters').girlfriend;
     if (gfVersion == null || gfVersion.length < 1)
     {
       gfVersion = name;
-      PlayState.SONG.characters.girlfriend = gfVersion;
+      PlayState.SONG.getSongData('characters').girlfriend = gfVersion;
     }
   }
 
@@ -163,7 +163,7 @@ class BaseStage extends FlxBasic
     return game.paused;
 
   inline private function get_songName()
-    return Song.formattedSongName;
+    return SongJsonData.formattedSongName;
 
   inline private function get_isStoryMode()
     return PlayState.isStoryMode;

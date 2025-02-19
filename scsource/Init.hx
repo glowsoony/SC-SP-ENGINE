@@ -5,10 +5,15 @@ import flixel.FlxState;
 import openfl.Lib;
 import lime.app.Application;
 import scfunkin.states.TitleState;
+import scfunkin.states.PlayState;
 import scfunkin.states.FlashingState;
 import scfunkin.play.song.data.Highscore;
 import scfunkin.debug.Debug;
 import scfunkin.debug.FPSCounter;
+#if HSCRIPT_ALLOWED
+import crowplexus.iris.Iris;
+import scfunkin.backend.scripting.psych.HScript.HScriptInfos;
+#end
 
 class Init extends FlxState
 {
@@ -42,6 +47,69 @@ class Init extends FlxState
     #end
 
     FlxG.autoPause = false;
+
+    #if HSCRIPT_ALLOWED
+    Iris.warn = function(x, ?pos:haxe.PosInfos) {
+      Iris.logLevel(WARN, x, pos);
+      var newPos:HScriptInfos = cast pos;
+      if (newPos.showLine == null) newPos.showLine = true;
+      var msgInfo:String = (newPos.funcName != null ? '(${newPos.funcName}) - ' : '') + '${newPos.fileName}:';
+      #if LUA_ALLOWED
+      if (newPos.isLua == true)
+      {
+        msgInfo += 'HScript:';
+        newPos.showLine = false;
+      }
+      #end
+      if (newPos.showLine == true)
+      {
+        msgInfo += '${newPos.lineNumber}:';
+      }
+      msgInfo += ' $x';
+      Debug.logInfo('WARNING: $msgInfo');
+      if (PlayState.instance != null) PlayState.instance.addTextToDebug('WARNING: $msgInfo', FlxColor.YELLOW);
+    }
+    Iris.error = function(x, ?pos:haxe.PosInfos) {
+      Iris.logLevel(ERROR, x, pos);
+      var newPos:HScriptInfos = cast pos;
+      if (newPos.showLine == null) newPos.showLine = true;
+      var msgInfo:String = (newPos.funcName != null ? '(${newPos.funcName}) - ' : '') + '${newPos.fileName}:';
+      #if LUA_ALLOWED
+      if (newPos.isLua == true)
+      {
+        msgInfo += 'HScript:';
+        newPos.showLine = false;
+      }
+      #end
+      if (newPos.showLine == true)
+      {
+        msgInfo += '${newPos.lineNumber}:';
+      }
+      msgInfo += ' $x';
+      Debug.logInfo('ERROR: $msgInfo');
+      if (PlayState.instance != null) PlayState.instance.addTextToDebug('ERROR: $msgInfo', FlxColor.RED);
+    }
+    Iris.fatal = function(x, ?pos:haxe.PosInfos) {
+      Iris.logLevel(FATAL, x, pos);
+      var newPos:HScriptInfos = cast pos;
+      if (newPos.showLine == null) newPos.showLine = true;
+      var msgInfo:String = (newPos.funcName != null ? '(${newPos.funcName}) - ' : '') + '${newPos.fileName}:';
+      #if LUA_ALLOWED
+      if (newPos.isLua == true)
+      {
+        msgInfo += 'HScript:';
+        newPos.showLine = false;
+      }
+      #end
+      if (newPos.showLine == true)
+      {
+        msgInfo += '${newPos.lineNumber}:';
+      }
+      msgInfo += ' $x';
+      Debug.logInfo('FATAL: $msgInfo');
+      if (PlayState.instance != null) PlayState.instance.addTextToDebug('FATAL: $msgInfo', 0xFFBB0000);
+    }
+    #end
 
     // Setup window events (like callbacks for onWindowClose)
     // and fullscreen keybind setup - Not Used

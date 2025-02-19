@@ -24,7 +24,7 @@ class EaseUtil
     return 4 * t * (1 - t);
 
   public static inline function tri(t:Float):Float
-    return 1 - Math.abs(2 * t - 2);
+    return 1 - Math.abs(2 * t - 1);
 
   public static inline function bell(t:Float):Float
     return quintInOut(tri(t));
@@ -77,7 +77,7 @@ class EaseUtil
   public static inline function quadOutIn(t:Float):Float
   {
     t = t * 2;
-    return t < 1 ? 0.5 - 0.5 * Math.pow((1 - t), 2) : 0.5 + 0.5 * Math.pow((t - 1), 2);
+    return t < 1 ? Math.pow(0.5 - 0.5 * (1 - t), 2) : Math.pow(0.5 + 0.5 * (t - 1), 2);
   }
 
   public static inline function cubeIn(t:Float):Float
@@ -95,7 +95,7 @@ class EaseUtil
   public static inline function cubeOutIn(t:Float):Float
   {
     t = t * 2;
-    return t < 1 ? 0.5 - 0.5 * Math.pow((1 - t), 3) : 0.5 + 0.5 * Math.pow((t - 1), 3);
+    return t < 1 ? Math.pow(0.5 - 0.5 * (1 - t), 3) : Math.pow(0.5 + 0.5 * (t - 1), 3);
   }
 
   public static inline function quartIn(t:Float):Float
@@ -115,7 +115,7 @@ class EaseUtil
   public static inline function quartOutIn(t:Float):Float
   {
     t = t * 2;
-    return t < 1 ? 0.5 - 0.5 * Math.pow((1 - t), 4) : 0.5 * 0.5 * Math.pow((t - 1), 4);
+    return t < 1 ? Math.pow(0.5 - 0.5 * (1 - t), 4) : Math.pow(0.5 + 0.5 * (t - 1), 4);
   }
 
   public static inline function quintIn(t:Float):Float
@@ -133,7 +133,7 @@ class EaseUtil
   public static inline function quintOutIn(t:Float):Float
   {
     t = t * 2;
-    return t < 1 ? 0.5 - 0.5 * Math.pow((1 - t), 5) : 0.5 + 0.5 * Math.pow((t - 1), 5);
+    return t < 1 ? Math.pow(0.5 - 0.5 * (1 - t), 5) : Math.pow(0.5 + 0.5 * (t - 1), 5);
   }
 
   public static inline function smoothStepIn(t:Float):Float
@@ -164,7 +164,7 @@ class EaseUtil
     return 0.5 - 0.5 * Math.cos(t * Math.PI);
 
   public static inline function sineOutIn(t:Float):Float
-    return t < .5 ? sineOut(t * 2) * 0.5 : sineIn((t * 2 - 1)) * 0.5 + 0.5;
+    return t < .5 ? sineOut(t * 2) * 0.5 : sineIn((t * 2 - 1) * 0.5 + 0.5);
 
   public static inline function bounceOut(t:Float):Float
   {
@@ -187,10 +187,10 @@ class EaseUtil
     return 1 - bounceOut(1 - t);
 
   public static inline function bounceInOut(t:Float):Float
-    return t < 0.5 ? bounceIn(t * 2) * 0.5 : bounceOut(t * 2 - 1) * 0.5 + 0.5;
+    return t < 0.5 ? bounceIn(t * 2) * 0.5 : bounceOut(t * 2 - 1 * 0.5 + 0.5);
 
   public static inline function bounceOutIn(t:Float):Float
-    return t < 0.5 ? bounceOut(t * 2) * 0.5 : bounceIn(t * 2 - 1) * 0.5 + 0.5;
+    return t < 0.5 ? bounceOut(t * 2) * 0.5 : bounceIn(t * 2 - 1 * 0.5 + 0.5);
 
   public static inline function circIn(t:Float):Float
     return 1 - Math.sqrt(1 - t * t);
@@ -207,7 +207,7 @@ class EaseUtil
   }
 
   public static inline function circOutIn(t:Float):Float
-    return t < 0.5 ? circOut(t * 2) * 0.5 : circIn(t * 2 - 1) * 0.5 + 0.5;
+    return t < 0.5 ? circOut(t * 2) * 0.5 : circIn(t * 2 - 1 * 0.5 + 0.5);
 
   public static inline function expoIn(t:Float):Float
     return Math.pow(1000, (t - 1)) - 0.001;

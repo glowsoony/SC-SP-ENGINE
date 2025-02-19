@@ -94,7 +94,7 @@ class School extends BaseStage
 
   override function createPost()
   {
-    var _song = PlayState.SONG.gameOverData;
+    var _song:GameOverData = PlayState.SONG.getSongData('gameOverData');
     if (_song.gameOverSound == null || _song.gameOverSound.trim().length < 1) GameOverSubstate.deathSoundName = 'fnf_loss_sfx-pixel';
     if (_song.gameOverLoop == null || _song.gameOverLoop.trim().length < 1) GameOverSubstate.loopSoundName = 'gameOver-pixel';
     if (_song.gameOverEnd == null || _song.gameOverEnd.trim().length < 1) GameOverSubstate.endSoundName = 'gameOverEnd-pixel';

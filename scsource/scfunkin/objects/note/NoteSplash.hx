@@ -287,10 +287,10 @@ class NoteSplash extends FunkinSCSprite
       else if (secondPath) finalSplashSkin = "notes/noteSplashes-" + styleChoice;
       else if (PlayState.SONG != null)
       {
-        if (PlayState.SONG.options.splashSkin != null
-          && PlayState.SONG.options.splashSkin.length > 0) finalSplashSkin = PlayState.SONG.options.splashSkin;
+        if (PlayState.SONG.getSongData('options').splashSkin != null
+          && PlayState.SONG.getSongData('options').splashSkin.length > 0) finalSplashSkin = PlayState.SONG.getSongData('options').splashSkin;
         else
-          finalSplashSkin = PlayState.SONG.options.disableSplashRGB ? 'noteSplashes_vanilla' : defaultNoteSplash + getSplashSkinPostfix();
+          finalSplashSkin = PlayState.SONG.getSongData('options').disableSplashRGB ? 'noteSplashes_vanilla' : defaultNoteSplash + getSplashSkinPostfix();
       }
     }
     if (finalSplashSkin == null) finalSplashSkin = defaultNoteSplash + getSplashSkinPostfix();
@@ -340,7 +340,7 @@ class NoteSplash extends FunkinSCSprite
 
       if (inEditor
         || (note == null || note.noteSplashData.useRGBShader)
-        && (PlayState.SONG == null || !PlayState.SONG.options.disableSplashRGB))
+        && (PlayState.SONG == null || !PlayState.SONG.getSongData('options').disableSplashRGB))
       {
         tempShader = new RGBPalette();
         // If Note RGB is enabled:

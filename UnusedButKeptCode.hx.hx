@@ -27,7 +27,7 @@ class UnusedButKeptCode
           }
         }
         final type:String = extraTrack.type.toLowerCase();
-        final finalName:String = extraTrack.name == null ? SONG.songId : finalName;
+        final finalName:String = extraTrack.name == null ? SONG.getSongData('songId') : finalName;
         final finalFolder:String = extraTrack.folder == null ? 'songs' : extraTrack.folder;
         final finalPrefix:String = extraTrack.prefix == null ? currentPrefix : extraTrack.prefix;
         final finalSuffix:String = extraTrack.suffix == null ? currentSuffix : extraTrack.suffix;

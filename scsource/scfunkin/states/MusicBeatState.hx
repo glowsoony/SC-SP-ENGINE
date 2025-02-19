@@ -396,7 +396,8 @@ class MusicBeatState extends flixel.addons.transition.FlxTransitionableState
   public function getBeatsOnSection()
   {
     var val:Null<Float> = 4;
-    if (PlayState.SONG != null && PlayState.SONG.notes[curSection] != null) val = PlayState.SONG.notes[curSection].sectionBeats;
+    if (PlayState.SONG != null
+      && PlayState.SONG.getSongData('notes')[curSection] != null) val = PlayState.SONG.getSongData('notes')[curSection].sectionBeats;
     return val == null ? 4 : val;
   }
 

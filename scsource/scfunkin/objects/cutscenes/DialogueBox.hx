@@ -24,7 +24,7 @@ class DialogueBox extends FlxSpriteGroup
   var bgFade:FlxSprite;
   var skipText:FlxText;
 
-  var songName:String = Song.formattedSongName;
+  var songName:String = SongJsonData.formattedSongName;
 
   public function new(talkingRight:Bool = true, ?dialogueList:Array<String>)
   {

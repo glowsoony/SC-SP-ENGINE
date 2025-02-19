@@ -40,7 +40,7 @@ class GameOverSubstate extends MusicBeatSubState
     endSoundName = 'gameOverEnd';
     deathDelay = 0;
 
-    var _song = PlayState.SONG.gameOverData;
+    var _song:GameOverData = PlayState.SONG.getSongData('gameOverData');
     if (_song != null)
     {
       if (_song.gameOverChar != null && _song.gameOverChar.trim().length > 0) characterName = _song.gameOverChar;
@@ -190,7 +190,7 @@ class GameOverSubstate extends MusicBeatSubState
       }
       else if (justPlayedLoop)
       {
-        switch (PlayState.SONG.stage)
+        switch (PlayState.SONG.getSongData('stage'))
         {
           case 'tank':
             coolStartDeath(0.2);

@@ -62,7 +62,7 @@ class CombinedMetaNote extends MetaNote
       if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
         rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
 
-      setShaderEnabled(PlayState.SONG.options.disableNoteRGB ? false : true);
+      setShaderEnabled(PlayState.SONG.getSongData('options').disableNoteRGB ? false : true);
 
       animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'Scroll');
       updateHitbox();
@@ -103,7 +103,7 @@ class MetaNote extends Note
         strumTime: time,
         noteData: nData,
         isSustainNote: false,
-        noteSkin: PlayState.SONG?.options?.arrowSkin,
+        noteSkin: PlayState.SONG?.getSongData('options')?.arrowSkin,
         prevNote: null,
         createdFrom: null,
         scrollSpeed: 1.0,
@@ -129,14 +129,14 @@ class MetaNote extends Note
     this.songData[1] = v;
     this.noteData = v % ChartingState.GRID_COLUMNS_PER_PLAYER;
     this.realNoteData = v;
-    this.setStrumLineID((v < ChartingState.GRID_COLUMNS_PER_PLAYER) ? PlayState.SONG.strumLineIds[0] : PlayState.SONG.strumLineIds[1]);
+    this.setStrumLineID((v < ChartingState.GRID_COLUMNS_PER_PLAYER) ? PlayState.SONG.getSongData('strumLineIds')[0] : PlayState.SONG.getSongData('strumLineIds')[1]);
 
     loadNoteAnims(containsPixelTexture);
 
     if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
       rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
 
-    setShaderEnabled((PlayState.SONG.options.disableNoteRGB || v <= -1) ? false : true);
+    setShaderEnabled((PlayState.SONG.getSongData('options').disableNoteRGB || v <= -1) ? false : true);
 
     animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'Scroll');
     updateHitbox();
@@ -340,7 +340,7 @@ class EditorSustain extends Note
     if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
       rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
 
-    setShaderEnabled((PlayState.SONG.options.disableNoteRGB || v <= -1) ? false : true);
+    setShaderEnabled((PlayState.SONG.getSongData('options').disableNoteRGB || v <= -1) ? false : true);
 
     sustainTile.changeNoteData(noteData, texture);
     reloadSustainTile();
@@ -380,7 +380,7 @@ class EditorSustainHold extends Note
     if (Note.globalRgbShaders.contains(rgbShader.parent)) // Is using a default shader
       rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(noteData));
 
-    rgbShader.enabled = ((PlayState.SONG.options.disableNoteRGB || v <= -1) ? false : true);
+    rgbShader.enabled = ((PlayState.SONG.getSongData('options').disableNoteRGB || v <= -1) ? false : true);
 
     animation.play(Note.colArray[this.noteData % Note.colArray.length] + 'hold');
   }

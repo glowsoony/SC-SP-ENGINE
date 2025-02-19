@@ -140,7 +140,7 @@ class EditorPlayState extends MusicBeatSubState
 
     #if DISCORD_ALLOWED
     // Updating Discord Rich Presence (with Time Left)
-    DiscordClient.changePresence('Playtesting on Chart Editor', PlayState.SONG.song, null, true, songLength);
+    DiscordClient.changePresence('Playtesting on Chart Editor', PlayState.SONG.getSongData('songId'), null, true, songLength);
     #end
     updateScore();
     super.create();
@@ -213,9 +213,9 @@ class EditorPlayState extends MusicBeatSubState
 
   override function sectionHit()
   {
-    if (PlayState.SONG.notes[curSection] != null)
+    if (PlayState.SONG.getSongData('notes')[curSection] != null)
     {
-      if (PlayState.SONG.notes[curSection].changeBPM) Conductor.bpm = PlayState.SONG.notes[curSection].bpm;
+      if (PlayState.SONG.getSongData('notes')[curSection].changeBPM) Conductor.bpm = PlayState.SONG.getSongData('notes')[curSection].bpm;
     }
     super.sectionHit();
   }
@@ -245,18 +245,18 @@ class EditorPlayState extends MusicBeatSubState
   function generateSong()
   {
     // FlxG.log.add(ChartParser.parse());
-    songSpeed = PlayState.SONG.speed;
+    songSpeed = PlayState.SONG.getSongData('speed');
     var songSpeedType:String = ClientPrefs.getGameplaySetting('scrolltype');
     switch (songSpeedType)
     {
       case "multiplicative":
-        songSpeed = PlayState.SONG.speed * ClientPrefs.getGameplaySetting('scrollspeed');
+        songSpeed = PlayState.SONG.getSongData('speed') * ClientPrefs.getGameplaySetting('scrollspeed');
       case "constant":
         songSpeed = ClientPrefs.getGameplaySetting('scrollspeed');
     }
     noteKillOffset = Math.max(Conductor.stepCrochet, 350 / songSpeed * playbackRate);
     var songData = PlayState.SONG;
-    Conductor.bpm = songData.bpm;
+    Conductor.bpm = songData.songData.get('bpm');
     FlxG.sound.music.volume = vocals.volume = opponentVocals.volume = 0;
 
     opponentStrums.scrollSpeed = songSpeed;
@@ -268,7 +268,7 @@ class EditorPlayState extends MusicBeatSubState
 
   public function createNotes():Array<Note>
   {
-    var daBpm:Float = (PlayState.SONG.notes[0].changeBPM == true) ? PlayState.SONG.notes[0].bpm : PlayState.SONG.bpm;
+    var daBpm:Float = (PlayState.SONG.getSongData('notes')[0].changeBPM == true) ? PlayState.SONG.getSongData('notes')[0].bpm : PlayState.SONG.getSongData('bpm');
     var oldNote:Note = null;
     var unspawnNotes:Array<Note> = [];
 
@@ -277,12 +277,14 @@ class EditorPlayState extends MusicBeatSubState
     var secTime:Float = 0;
     var cachedSectionTimes:Array<Float> = [];
     var cachedSectionCrochets:Array<Float> = [];
+    var notes:Array<SwagSection> = [];
     if (PlayState.SONG != null)
     {
+      notes = PlayState.SONG.getSongData('notes');
       var tempBpm:Float = daBpm;
-      for (secNum => section in PlayState.SONG.notes)
+      for (secNum => section in notes)
       {
-        if (PlayState.SONG.notes[noteSec].changeBPM == true) tempBpm = PlayState.SONG.notes[noteSec].bpm;
+        if (notes[noteSec].changeBPM == true) tempBpm = notes[noteSec].bpm;
 
         secTime += Conductor.calculateCrochet(tempBpm) * (Math.round(4 * section.sectionBeats) / 4);
         cachedSectionTimes.push(secTime);
@@ -297,7 +299,7 @@ class EditorPlayState extends MusicBeatSubState
       while (cachedSectionTimes.length > noteSec + 1 && cachedSectionTimes[noteSec + 1] <= note.strumTime)
       {
         noteSec++;
-        if (PlayState.SONG.notes[noteSec].changeBPM == true) daBpm = PlayState.SONG.notes[noteSec].bpm;
+        if (notes[noteSec].changeBPM == true) daBpm = notes[noteSec].bpm;
       }
 
       var idx:Int = _noteList.indexOf(note);
@@ -331,7 +333,7 @@ class EditorPlayState extends MusicBeatSubState
           strumTime: note.strumTime,
           noteData: note.noteData,
           isSustainNote: false,
-          noteSkin: PlayState.SONG.options.arrowSkin,
+          noteSkin: PlayState.SONG.getSongData('options').arrowSkin,
           prevNote: oldNote,
           createdFrom: this,
           scrollSpeed: songSpeed,
@@ -357,7 +359,7 @@ class EditorPlayState extends MusicBeatSubState
               strumTime: note.strumTime + (curStepCrochet * susNote),
               noteData: note.noteData,
               isSustainNote: true,
-              noteSkin: PlayState.SONG.options.arrowSkin,
+              noteSkin: PlayState.SONG.getSongData('options').arrowSkin,
               prevNote: oldNote,
               createdFrom: this,
               scrollSpeed: songSpeed,
@@ -516,7 +518,7 @@ class EditorPlayState extends MusicBeatSubState
     daRating.count++;
 
     note.canSplash = ((!note.noteSplashData.disabled && ClientPrefs.splashOption('Player') && daRating.doNoteSplash)
-      && !PlayState.SONG.options.notITG);
+      && !PlayState.SONG.getSongData('options').notITG);
     if (note.canSplash) spawnNoteSplashOnNote(note);
 
     if (playbackRate >= 1.05) score = getRatesScore(playbackRate, score);
@@ -745,7 +747,7 @@ class EditorPlayState extends MusicBeatSubState
 
   function opponentNoteHit(note:Note):Void
   {
-    if (PlayState.SONG.needsVoices && opponentVocals.length <= 0) vocals.volume = 1;
+    if (PlayState.SONG.getSongData('needsVoices') && opponentVocals.length <= 0) vocals.volume = 1;
     var strum:StrumArrow = opponentStrums.members[note.noteData % opponentStrums.members.length - 1];
     if (strum != null)
     {
