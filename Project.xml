@@ -270,7 +270,7 @@ xsi:schemaLocation="http://lime.openfl.org/project/1.0.4 http://lime.openfl.org/
 	<haxelib name="FlxPartialSound"/>
 	<haxelib name="flxsoundfilters" />
 
-	<define name="FunkinModcharting" /> <!--Not used because SCE adapter is not public-->
+	<!-- <define name="FunkinModcharting" /> --> <!--Not used because SCE adapter is not public-->
 	<section if="FunkinModcharting">
 		<haxedef name="FM_ENGINE" value="SCE"/>
 		<haxedef name="FM_ENGINE_VERSION" value="1.5.3"/>
